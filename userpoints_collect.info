@@ -1,0 +1,4 @@
+name = Userpoints Collect
+description = Provides a block for users to collect points within time constraints.
+package = Userpoints
+core = 7.x

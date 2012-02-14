@@ -1,0 +1,126 @@
+<?php
+
+/**
+ * @file
+ * Provides a block for users to collect points within time constraints.
+ */
+
+
+/**
+ * Implements hook_permission().
+ */
+function userpoints_collect_permission() {
+  return array(
+    'use userpoints collect' => array(
+      'title' => t('use userpoints collect'),
+      'description' => t('Allows users to use the userpoints collect block.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function userpoints_collect_theme() {
+  return array(
+    'userpoints_collect_form' => array(
+      'render element' => 'form',
+      'template' => 'userpoints-collect-form'
+    ),
+  );
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function userpoints_collect_block_info() {
+  return array(
+    'userpoints_collect' => array(
+      'info' => t('Userpoints Collect'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function userpoints_collect_block_view($delta = '') {
+  switch ( $delta ) {
+    case 'userpoints_collect':
+      if ( userpoints_collect_access() ) {
+        return array(
+          'content' => drupal_get_form('userpoints_collect_form'),
+        );
+      }
+  }
+}
+
+/**
+ * Returns a Userpoints collect form.
+ */
+function userpoints_collect_form($form, &$form_state) {
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Collect'),
+  );
+
+  return $form;
+}
+
+/**
+ * Validate a Userpoints collect form submission.
+ */
+function userpoints_collect_form_validate($form, &$form_state) {
+  drupal_set_message(__FUNCTION__);
+}
+
+/**
+ * Process a Userpoints collect form submission.
+ */
+function userpoints_collect_form_submit($form, &$form_state) {
+  drupal_set_message(__FUNCTION__);
+}
+
+/**
+ * Determine whether the user has access to collect userpoints.
+ *
+ * @param $account
+ *   (optional) The account to check, if not given use currently logged in user.
+ * @return
+ *   Boolean TRUE if the account has the requested permission.
+ */
+function userpoints_collect_access($account = NULL) {
+  global $user;
+
+  if ( !isset($account) ) {
+    $account = $user;
+  }
+
+  // User #1 has privileges.
+  if ( $account->uid == 1 ) {
+    return TRUE;
+  }
+
+  if ( user_access('use userpoints collect', $account) ) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+/**
+ * Process variables for userpoints-collect-form.tpl.php
+ *
+ * The $variables array contains the following arguments:
+ * - $form
+ *
+ * @see userpoints-collect-block-form.tpl.php
+ */
+function template_preprocess_userpoints_collect_form(&$variables) {
+  $variables['userpoints_collect'] = array();
+  foreach ( element_children($variables['form']) as $key ) {
+    $variables['userpoints_collect'][$key] = drupal_render($variables['form'][$key]);
+  }
+
+  $variables['userpoints_collect_form'] = implode($variables['userpoints_collect']);
+}
