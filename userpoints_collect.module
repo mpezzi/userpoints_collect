@@ -65,7 +65,7 @@ function userpoints_collect_form($form, &$form_state) {
   $form['submit'] = array(
     '#disabled' => !$access,
     '#type' => 'submit',
-    '#value' => $access ? t('Collect') : t('No Collect'),
+    '#value' => $access ? t('Collect Now') : t('Not Available'),
   );
 
   return $form;
