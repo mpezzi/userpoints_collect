@@ -60,10 +60,12 @@ function userpoints_collect_block_view($delta = '') {
  * Returns a Userpoints collect form.
  */
 function userpoints_collect_form($form, &$form_state) {
+  $access = userpoints_collect_access();
+
   $form['submit'] = array(
-    '#disabled' => !userpoints_collect_access(),
+    '#disabled' => !$access,
     '#type' => 'submit',
-    '#value' => userpoints_collect_access() ? t('Collect') : t('No Collect'),
+    '#value' => $access ? t('Collect') : t('No Collect'),
   );
 
   return $form;
