@@ -48,9 +48,11 @@ function userpoints_collect_block_info() {
 function userpoints_collect_block_view($delta = '') {
   switch ( $delta ) {
     case 'userpoints_collect':
-      return array(
-        'content' => drupal_get_form('userpoints_collect_form'),
-      );
+      if ( user_is_logged_in() ) {
+        return array(
+          'content' => drupal_get_form('userpoints_collect_form'),
+        );
+      }
   }
 }
 
