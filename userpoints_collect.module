@@ -122,14 +122,19 @@ function userpoints_collect_access($account = NULL) {
  *   Boolean TRUE if the account is eligible.
  */
 function userpoints_collect_eligible($account = NULL) {
-  global $user;
+  $last_txns = drupal_static(__FUNCTION__, array());
 
   if ( !isset($account) ) {
+    global $user;
     $account = $user;
   }
 
   // Load the last transaction by user.
-  $last_txn = db_query("SELECT * FROM {userpoints_txn} WHERE uid = :uid ORDER BY time_stamp DESC LIMIT 1", array(':uid' => $account->uid))->fetchObject();
+  if ( !isset($last_txns[$account->uid]) ) {
+    $last_txns[$account->uid] = db_query("SELECT * FROM {userpoints_txn} WHERE uid = :uid ORDER BY time_stamp DESC LIMIT 1", array(':uid' => $account->uid))->fetchObject();
+  }
+
+  $last_txn = $last_txns[$account->uid];
 
   // No transaction? User is eligible.
   if ( !$last_txn ) {
