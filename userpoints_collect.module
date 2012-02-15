@@ -37,6 +37,7 @@ function userpoints_collect_block_info() {
   return array(
     'userpoints_collect' => array(
       'info' => t('Userpoints Collect'),
+      'cache' => DRUPAL_NO_CACHE,
     ),
   );
 }
