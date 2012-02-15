@@ -48,11 +48,9 @@ function userpoints_collect_block_info() {
 function userpoints_collect_block_view($delta = '') {
   switch ( $delta ) {
     case 'userpoints_collect':
-      if ( userpoints_collect_access() ) {
-        return array(
-          'content' => drupal_get_form('userpoints_collect_form'),
-        );
-      }
+      return array(
+        'content' => drupal_get_form('userpoints_collect_form'),
+      );
   }
 }
 
@@ -61,8 +59,9 @@ function userpoints_collect_block_view($delta = '') {
  */
 function userpoints_collect_form($form, &$form_state) {
   $form['submit'] = array(
+    '#disabled' => !userpoints_collect_access(),
     '#type' => 'submit',
-    '#value' => t('Collect'),
+    '#value' => userpoints_collect_access() ? t('Collect') : t('No Collect'),
   );
 
   return $form;
