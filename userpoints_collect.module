@@ -72,14 +72,17 @@ function userpoints_collect_form($form, &$form_state) {
  * Validate a Userpoints collect form submission.
  */
 function userpoints_collect_form_validate($form, &$form_state) {
-  drupal_set_message(__FUNCTION__);
+  //drupal_set_message(__FUNCTION__);
 }
 
 /**
  * Process a Userpoints collect form submission.
  */
 function userpoints_collect_form_submit($form, &$form_state) {
-  drupal_set_message(__FUNCTION__);
+  userpoints_userpointsapi(array(
+    'uid' => $GLOBALS['user']->uid,
+    'points' => 1,
+  ));
 }
 
 /**
@@ -102,11 +105,74 @@ function userpoints_collect_access($account = NULL) {
     return TRUE;
   }
 
-  if ( user_access('use userpoints collect', $account) ) {
+  // Check if account has permission and is eligible to collect.
+  if ( user_access('use userpoints collect', $account) && userpoints_collect_eligible($account) ) {
     return TRUE;
   }
 
   return FALSE;
+}
+
+/**
+ * Returns whether a user is eligible to collect a point.
+ *
+ * @param $account
+ *   A user object.
+ * @return
+ *   Boolean TRUE if the account is eligible.
+ */
+function userpoints_collect_eligible($account = NULL) {
+  global $user;
+
+  if ( !isset($account) ) {
+    $account = $user;
+  }
+
+  // Load the last transaction by user.
+  $last_txn = db_query("SELECT * FROM {userpoints_txn} WHERE uid = :uid ORDER BY time_stamp DESC LIMIT 1", array(':uid' => $account->uid))->fetchObject();
+
+  // No transaction? User is eligible.
+  if ( !$last_txn ) {
+    return TRUE;
+  }
+  // Check transaction and make sure it falls into the eligible period.
+  else {
+    $last_timestamp = $last_txn->time_stamp;
+
+    // Eligible period is 00:00:00 plus one day.
+    $eligibility_period_min = mktime(0, 0, 0);
+    $eligibility_period_max = mktime(0, 0, 0) + 86400;
+
+    if ( $last_timestamp > $eligibility_period_min && $last_timestamp < $eligibility_period_max ) {
+      return FALSE;
+    }
+    else {
+      return TRUE;
+    }
+  }
+
+  // Something went wrong.
+  return FALSE;
+}
+
+/**
+ * Returns an array of possible collect restriction periods.
+ */
+function userpoints_collect_eligible_periods() {
+  return array(
+    NULL => 'Never',
+    60 => '1 minute',
+    300 => '5 minutes',
+    600 => '10 minutes',
+    900 => '15 minutes',
+    1800 => 'Half hour',
+    3600 => 'One hour',
+    86400 => 'One Day',
+    604800 => 'One Week',
+    1209600 => 'Two Weeks',
+    2419200 => 'Four Weeks',
+    31536000 => '365 Days',
+  );
 }
 
 /**
