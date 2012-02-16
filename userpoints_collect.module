@@ -176,7 +176,7 @@ function userpoints_collect_eligible($account = NULL) {
  * Add points for a user.
  */
 function userpoints_collect_add($params) {
-  if ( userpoints_collect_eligible(user_load($params['uid'])) ) {
+  if ( userpoints_collect_access(user_load($params['uid'])) ) {
     return userpoints_userpointsapi($params);
   }
 
