@@ -1,0 +1,92 @@
+<?php
+
+/**
+ * @file
+ * Exposes userpoints collect functionality via a service.
+ */
+
+
+/**
+ * Implements hook_services_resources().
+ */
+function userpoints_collect_service_services_resources() {
+  return array(
+    'userpoints_collect' => array(
+      'eligible' => array(
+        'help' => 'Determine the eligibility to collect userpoints.',
+        'file' => array('file' => 'inc', 'module' => 'userpoints_collect_service'),
+        'callback' => 'userpoints_collect_service_eligible',
+        'access callback' => 'userpoints_collect_service_access',
+        'access arguments' => array('eligible'),
+        'access arguments append' => TRUE,
+        'args' => array(
+          array(
+            'name' => 'uid',
+            'type' => 'int',
+            'description' => 'The User ID for which the points should be loaded. Defaults to the current logged in user.',
+            'source' => array('path' => 0),
+          ),
+        ),
+      ),
+      'add' => array(
+        'help' => 'Add points to a user if eligible.',
+        'file' => array('file' => 'inc', 'module' => 'userpoints_collect_service'),
+        'callback' => 'userpoints_collect_service_collect',
+        'access callback' => 'userpoints_collect_service_access',
+        'access arguments' => array('add'),
+        'access arguments append' => TRUE,
+        'args' => array(
+          array(
+            'name' => 'uid',
+            'type' => 'int',
+            'optional' => FALSE,
+            'description' => 'A valid Drupal User ID.',
+            'source' => array('data' => 'uid'),
+          ),
+          array(
+            'name' => 'points',
+            'type' => 'int',
+            'optional' => FALSE,
+            'source' => array('data' => 'points'),
+            'description' => 'Number of points to add/subtract.',
+          ),
+          array(
+            'name' => 'tid',
+            'type' => 'int',
+            'optional' => TRUE,
+            'source' => array('data' => 'tid'),
+            'description' => t('An optional Term ID for the category.'),
+          ),
+          array(
+            'name' => 'operation',
+            'type' => 'string',
+            'optional' => TRUE,
+            'source' => array('data' => 'operation'),
+            'description' => t('An operation string for this transaction.'),
+          ),
+          array(
+            'name' => 'description',
+            'type' => 'string',
+            'optional' => TRUE,
+            'source' => array('data' => 'description'),
+            'description' => t('An optional description of this transaction.'),
+          ),
+          array(
+            'name' => 'entity_type',
+            'type' => 'string',
+            'optional' => TRUE,
+            'source' => array('data' => 'entity_type'),
+            'description' => t('An optional description of this transaction.'),
+          ),
+          array(
+            'name' => 'entity_id',
+            'type' => 'int',
+            'optional' => TRUE,
+            'source' => array('data' => 'entity_id'),
+            'description' => t('An optional description of this transaction.'),
+          ),
+        ),
+      ),
+    ),
+  );
+}

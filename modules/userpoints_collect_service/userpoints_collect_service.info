@@ -1,0 +1,8 @@
+name = Userpoints Collect Service
+description = Exposes userpoints collect functionality via a service.
+package = Userpoints
+core = 7.x
+
+dependencies[] = userpoints
+dependencies[] = userpoints_collect
+dependencies[] = services

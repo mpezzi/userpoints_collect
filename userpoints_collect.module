@@ -82,7 +82,7 @@ function userpoints_collect_form_validate($form, &$form_state) {
  * Process a Userpoints collect form submission.
  */
 function userpoints_collect_form_submit($form, &$form_state) {
-  userpoints_userpointsapi(array(
+  userpoints_collect_add(array(
     'uid' => $GLOBALS['user']->uid,
     'points' => 1,
   ));
@@ -147,6 +147,7 @@ function userpoints_collect_eligible($account = NULL) {
   else {
     $last_timestamp = $last_txn->time_stamp;
 
+    /*
     // Eligible period is 00:00:00 plus one day.
     $eligibility_period_min = mktime(0, 0, 0);
     $eligibility_period_max = mktime(0, 0, 0) + 86400;
@@ -157,10 +158,32 @@ function userpoints_collect_eligible($account = NULL) {
     else {
       return TRUE;
     }
+    */
+
+    if ( $last_timestamp + 60 < time() ) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
   }
 
   // Something went wrong.
   return FALSE;
+}
+
+/**
+ * Add points for a user.
+ */
+function userpoints_collect_add($params) {
+  if ( userpoints_collect_eligible(user_load($params['uid'])) ) {
+    return userpoints_userpointsapi($params);
+  }
+
+  return array(
+    'status' => FALSE,
+    'reason' => t('User is not eligible.'),
+  );
 }
 
 /**
