@@ -106,7 +106,7 @@ function userpoints_collect_access($account = NULL) {
   }
 
   // Check if account has permission and is eligible to collect.
-  if ( user_access('use userpoints collect', $account) && userpoints_collect_eligible($account) ) {
+  if ( user_access('use userpoints collect', $account) && userpoints_collect_eligibility($account) ) {
     return TRUE;
   }
 
@@ -121,7 +121,7 @@ function userpoints_collect_access($account = NULL) {
  * @return
  *   Boolean TRUE if the account is eligible.
  */
-function userpoints_collect_eligible($account = NULL) {
+function userpoints_collect_eligibility($account = NULL) {
   $last_txns = drupal_static(__FUNCTION__, array());
 
   if ( !isset($account) ) {
@@ -186,7 +186,7 @@ function userpoints_collect_add($params) {
 /**
  * Returns an array of possible collect restriction periods.
  */
-function userpoints_collect_eligible_periods() {
+function userpoints_collect_eligibility_periods() {
   return array(
     NULL => 'Never',
     60 => '1 minute',
