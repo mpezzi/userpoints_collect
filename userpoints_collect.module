@@ -46,13 +46,10 @@ function userpoints_collect_block_info() {
  * Implements hook_block_view().
  */
 function userpoints_collect_block_view($delta = '') {
-  switch ( $delta ) {
-    case 'userpoints_collect':
-      if ( user_is_logged_in() ) {
-        return array(
-          'content' => drupal_get_form('userpoints_collect_form'),
-        );
-      }
+  if ( $delta == 'userpoints_collect' && user_access('use userpoints collect') ) {
+    return array(
+      'content' => drupal_get_form('userpoints_collect_form'),
+    );
   }
 }
 
