@@ -99,6 +99,8 @@ function userpoints_collect_form_submit($form, &$form_state) {
     'uid' => $user->uid,
     'points' => 1,
   ));
+
+  $form_state['redirect'] = variable_get('userpoints_collect_redirect', '<front>');
 }
 
 /**
