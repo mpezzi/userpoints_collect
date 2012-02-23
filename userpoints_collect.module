@@ -5,6 +5,101 @@
  * Provides a block for users to collect points within time constraints.
  */
 
+/**
+ * Implements hook_menu().
+ */
+function userpoints_collect_menu() {
+  $items['admin/userpoints/dates'] = array(
+    'title' => 'Userpoints Eligible Dates',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('userpoints_collect_dates_form'),
+    'access arguments' => array('use userpoints collect'),
+  );
+  return $items;
+}
+
+/**
+ * Returns a Userpoints collect dates form.
+ */
+function userpoints_collect_dates_form($form, &$form_state) {
+  $access = userpoints_collect_dates_manage();
+  $format = 'Y-m-d h:i A';
+
+  $date = time();
+
+  if ( $access ) {
+    $form['eligible_date'] = array(
+      '#type'                => 'date_popup',
+      '#title'               => 'Start Date',
+      '#default_value'       => $date,
+      '#date_format'         => $format,
+      '#date_label_position' => 'above',
+    );
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Update Dates'),
+    );
+  }
+  else {
+    $form['#disabled'] = TRUE;
+    $form['notice'] = array(
+      '#markup' => t('Sorry, you are not authorized to manage dates.'),
+    );
+  }
+
+  return $form;
+}
+
+/**
+ * Validates submitted start/end dates
+ */
+function userpoints_collect_dates_form_validate($form, &$form_state) {
+  $timestamp = strtotime( implode(" ", $form_state['input']['eligible_date']) );
+
+  // start date must be specified
+  if ( empty($timestamp) ) {
+    form_set_error('eligible_date', t('Please specify a date and time'));
+  }
+  elseif ( $timestamp < time() ) {
+    form_set_error('eligible_date', 'Please specify a future date and time');
+  }
+  else {
+    $form_state['values']['eligible_timestamp'] = $timestamp;
+  }
+}
+
+/**
+ * Process a Userpoints collect dates form submission.
+ */
+function userpoints_collect_dates_form_submit($form, &$form_state) {
+  global $user;
+
+  $result = db_insert('userpoints_collect_dates')
+    ->fields(array(
+      'timestamp' => $form_state['values']['eligible_timestamp'],
+    ))
+    ->execute();
+
+  return $result;
+}
+
+/**
+ * Returns true if user is admin
+ */
+function userpoints_collect_dates_manage($account = NULL) {
+  global $user;
+
+   if ( !isset($account) ) {
+     $account = $user;
+   }
+
+  // User #1 has privileges.
+  if ( $account->uid == 1 ) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
 
 /**
  * Implements hook_permission().
@@ -57,6 +152,7 @@ function userpoints_collect_block_view($delta = '') {
  * Returns a Userpoints collect form.
  */
 function userpoints_collect_form($form, &$form_state) {
+  global $user;
   $access = userpoints_collect_access();
 
   if ( $access ) {
@@ -74,8 +170,11 @@ function userpoints_collect_form($form, &$form_state) {
       '#markup' => l('Back to Facebook', 'http://facebook.com', array('attributes' => array('class' => array('btn', 'btn-large', 'btn-primary')))),
     );
 
+    $timeleft = userpoints_collect_eligibility_timeleft();
+    $ballot_message = !$timeleft ? 'No more ballots remaining.' : t('Next ballot available in @timeleft.', array('@timeleft' => $timeleft));
+
     $form['timeleft'] = array(
-      '#markup' => t('Next ballot available in @timeleft.', array('@timeleft' => userpoints_collect_eligibility_timeleft())),
+      '#markup' => $ballot_message,
     );
   }
 
@@ -166,25 +265,39 @@ function userpoints_collect_eligibility($account = NULL) {
   else {
     $last_timestamp = $last_txn->time_stamp;
 
-    // Eligible period is 00:00:00 plus one day.
-    $eligibility_period_min = mktime(0, 0, 0);
-    $eligibility_period_max = mktime(0, 0, 0) + 86400;
+    // get eligible dates from the db
+    $eligibility_period_min = db_select('userpoints_collect_dates', 'd')
+      ->fields('d', array('timestamp'))
+      ->condition('timestamp', time(), '>')
+      ->orderBy('timestamp', 'DESC')
+      ->range(0,1)
+      ->execute()
+      ->fetchField();
 
-    if ( $last_timestamp > $eligibility_period_min && $last_timestamp < $eligibility_period_max ) {
-      return FALSE;
+    $eligibility_period_max = db_select('userpoints_collect_dates', 'd')
+      ->fields('d', array('timestamp'))
+      ->condition('timestamp', time(), '<')
+      ->range(0,1)
+      ->execute()
+      ->fetchField();
+
+    // check if valid timestamps were retrieved for min / max
+    // eligibility periods
+    if ( isset($eligibility_period_min) && $eligibility_period_min > 0
+      && isset($eligibility_period_max) && $eligibility_period_max > 0 ) {
+      if ( $last_timestamp > $eligibility_period_min
+        && $last_timestamp < $eligibility_period_max ) {
+        // user's last point claimed is within the eligibility period
+        return FALSE;
+      }
+      else {
+        return TRUE;
+      }
     }
     else {
-      return TRUE;
-    }
-
-    /*
-    if ( $last_timestamp + 60 < time() ) {
-      return TRUE;
-    }
-    else {
+      // No eligible dates were found in the database
       return FALSE;
     }
-    */
   }
 
   // Something went wrong.
@@ -192,35 +305,89 @@ function userpoints_collect_eligibility($account = NULL) {
 }
 
 /**
+ * Retrieves the next timestamp for when the user can collect
+ * a point
+ */
+function userpoints_collect_next_eligible_time($account = NULL) {
+  $last_txns = drupal_static(__FUNCTION__, array());
+
+  if ( !isset($account) ) {
+    global $user;
+    $account = $user;
+  }
+
+  // Load the last transaction by user.
+  if ( !isset($last_txns[$account->uid]) ) {
+    $last_txns[$account->uid] = db_select('userpoints_txn', 'u')
+      ->fields('u')
+      ->condition('uid', $account->uid)
+      ->orderBy('time_stamp', 'DESC')
+      ->range(0, 1)
+      ->execute()
+      ->fetchObject();
+  }
+
+  $last_txn = $last_txns[$account->uid];
+  $last_timestamp = $last_txn->time_stamp;
+
+  // get eligible dates from the db
+  // must be sorted in ASCending order
+  $upcoming_eligible_time = db_select('userpoints_collect_dates', 'd')
+    ->fields('d', array('timestamp'))
+    ->orderBy('timestamp', 'ASC')
+    ->condition('timestamp', $last_timestamp, '>')
+    ->execute();
+
+  // if an upcoming eligible time was found, return it
+  // otherwise return FALSE
+  if (!$upcoming_eligible_time) {
+    return FALSE;
+  }
+  else {
+    return $upcoming_eligible_time->fetchField();
+  }
+}
+
+/**
  * Returns the timeleft for collect eligibility.
  */
 function userpoints_collect_eligibility_timeleft($granularity = 2) {
-  $seconds = mktime(0, 0, 0) + 86400 - time();
-  $units = array(
-    '1 year|:count years' => 31536000,
-    '1 week|:count weeks' => 604800,
-    '1 day|:count days' => 86400,
-    '1 hour|:count hours' => 3600,
-    '1 min|:count min' => 60,
-    '1 sec|:count sec' => 1
-  );
-  $output = '';
-  foreach ($units as $key => $value) {
-    $key = explode('|', $key);
-    if ($seconds >= $value) {
-      $count = floor($seconds / $value);
-      $output .= ($output ? ' ' : '');
-      if ($count == 1) {
-        $output .= $key[0];
-      } else {
-        $output .= str_replace(':count', $count, $key[1]);
+  $next_eligible = userpoints_collect_next_eligible_time();
+
+  if ($next_eligible) {
+    $seconds = $next_eligible - time();
+
+    // $seconds = mktime(0, 0, 0) + 86400 - time();
+    $units = array(
+      '1 year|:count years' => 31536000,
+      '1 week|:count weeks' => 604800,
+      '1 day|:count days' => 86400,
+      '1 hour|:count hours' => 3600,
+      '1 min|:count min' => 60,
+      '1 sec|:count sec' => 1
+      );
+    $output = '';
+    foreach ($units as $key => $value) {
+      $key = explode('|', $key);
+      if ($seconds >= $value) {
+        $count = floor($seconds / $value);
+        $output .= ($output ? ' ' : '');
+        if ($count == 1) {
+          $output .= $key[0];
+        } else {
+          $output .= str_replace(':count', $count, $key[1]);
+        }
+        $seconds %= $value;
+        $granularity--;
       }
-      $seconds %= $value;
-      $granularity--;
+      if ($granularity == 0) {
+        break;
+      }
     }
-    if ($granularity == 0) {
-      break;
-    }
+
+  }
+  else {
+    return FALSE;
   }
 
   return $output ? $output : '0 sec';
@@ -276,3 +443,51 @@ function template_preprocess_userpoints_collect_form(&$variables) {
 
   $variables['userpoints_collect_form'] = implode($variables['userpoints_collect']);
 }
+
+
+/**
+ * Clear all dates.
+ */
+function userpoints_collect_clear_dates() {
+  db_truncate('userpoints_collect_dates')->execute();
+  drupal_set_message(t('Cleared all dates'));
+}
+
+/**
+ * Generate seeds.
+ */
+function seed_generate($number_of_seeds = 10, $tid = NULL) {
+  seed_clear_all();
+
+  for ( $i = 1; $i <= $number_of_seeds; $i++ ) {
+    $seed = (object) array(
+      'tid' => $tid,
+      'seed_timestamp' => time() + ( $i * 60 ),
+      'name' => 'generated' . $i,
+      'status' => 1,
+    );
+
+    seed_save($seed);
+  }
+
+  drupal_set_message(t('Successfully generated @number_of_seeds seeds.', array('@number_of_seeds' => $number_of_seeds)));
+}
+
+function userpoints_collect_date_save($date) {
+  $date->is_new = empty($date->id);
+  if ($date->is_new) {
+    drupal_write_record('userpoints_collect_dates', $date);
+  }
+  else {
+    drupal_write_record('userpoints_collect_dates', $date, 'id');
+  }
+}
+
+function userpoints_collect_date_load($id) {
+  return db_select('userpoints_collect_dates', 'u')
+    ->fields('u')
+    ->condition('id', $id)
+    ->execute()
+    ->fetchObject();
+}
+
