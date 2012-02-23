@@ -59,11 +59,25 @@ function userpoints_collect_block_view($delta = '') {
 function userpoints_collect_form($form, &$form_state) {
   $access = userpoints_collect_access();
 
-  $form['submit'] = array(
-    '#disabled' => !$access,
-    '#type' => 'submit',
-    '#value' => $access ? t('Collect Now') : t('Not Available'),
-  );
+  if ( $access ) {
+    $form['submit'] = array(
+      //'#disabled' => !$access,
+      '#type' => 'submit',
+      '#value' => t('Collect Now'),
+    );
+  }
+  else {
+    $form['#disabled'] = TRUE;
+    $form['link'] = array(
+      '#prefix' => '<p>',
+      '#suffix' => '</p>',
+      '#markup' => l('Back to Facebook', 'http://facebook.com', array('attributes' => array('class' => array('btn', 'btn-large', 'btn-primary')))),
+    );
+
+    $form['timeleft'] = array(
+      '#markup' => t('Next ballot available in @timeleft.', array('@timeleft' => userpoints_collect_eligibility_timeleft())),
+    );
+  }
 
   return $form;
 }
@@ -79,8 +93,10 @@ function userpoints_collect_form_validate($form, &$form_state) {
  * Process a Userpoints collect form submission.
  */
 function userpoints_collect_form_submit($form, &$form_state) {
+  global $user;
+
   userpoints_collect_add(array(
-    'uid' => $GLOBALS['user']->uid,
+    'uid' => $user->uid,
     'points' => 1,
   ));
 }
@@ -150,7 +166,6 @@ function userpoints_collect_eligibility($account = NULL) {
   else {
     $last_timestamp = $last_txn->time_stamp;
 
-    /*
     // Eligible period is 00:00:00 plus one day.
     $eligibility_period_min = mktime(0, 0, 0);
     $eligibility_period_max = mktime(0, 0, 0) + 86400;
@@ -161,18 +176,54 @@ function userpoints_collect_eligibility($account = NULL) {
     else {
       return TRUE;
     }
-    */
 
+    /*
     if ( $last_timestamp + 60 < time() ) {
       return TRUE;
     }
     else {
       return FALSE;
     }
+    */
   }
 
   // Something went wrong.
   return FALSE;
+}
+
+/**
+ * Returns the timeleft for collect eligibility.
+ */
+function userpoints_collect_eligibility_timeleft($granularity = 2) {
+  $seconds = mktime(0, 0, 0) + 86400 - time();
+  $units = array(
+    '1 year|:count years' => 31536000,
+    '1 week|:count weeks' => 604800,
+    '1 day|:count days' => 86400,
+    '1 hour|:count hours' => 3600,
+    '1 min|:count min' => 60,
+    '1 sec|:count sec' => 1
+  );
+  $output = '';
+  foreach ($units as $key => $value) {
+    $key = explode('|', $key);
+    if ($seconds >= $value) {
+      $count = floor($seconds / $value);
+      $output .= ($output ? ' ' : '');
+      if ($count == 1) {
+        $output .= $key[0];
+      } else {
+        $output .= str_replace(':count', $count, $key[1]);
+      }
+      $seconds %= $value;
+      $granularity--;
+    }
+    if ($granularity == 0) {
+      break;
+    }
+  }
+
+  return $output ? $output : '0 sec';
 }
 
 /**
