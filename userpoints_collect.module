@@ -446,31 +446,33 @@ function template_preprocess_userpoints_collect_form(&$variables) {
 
 
 /**
+ * Various functions for clearing, generating and saving
+ * new eligible dates to the database
+ */
+
+/**
  * Clear all dates.
  */
-function userpoints_collect_clear_dates() {
+function userpoints_collect_dates_clear() {
   db_truncate('userpoints_collect_dates')->execute();
   drupal_set_message(t('Cleared all dates'));
 }
 
 /**
- * Generate seeds.
+ * Generate dates.
  */
-function seed_generate($number_of_seeds = 10, $tid = NULL) {
-  seed_clear_all();
+function userpoints_collect_dates_generate($number_of_dates = 5) {
+  userpoints_collect_dates_clear();
 
-  for ( $i = 1; $i <= $number_of_seeds; $i++ ) {
-    $seed = (object) array(
-      'tid' => $tid,
-      'seed_timestamp' => time() + ( $i * 60 ),
-      'name' => 'generated' . $i,
-      'status' => 1,
+  for ( $i = 1; $i <= $number_of_dates; $i++ ) {
+    $date = (object) array(
+      'timestamp' => time() + ( $i * 60 ),
     );
 
-    seed_save($seed);
+    userpoints_collect_date_save($date);
   }
 
-  drupal_set_message(t('Successfully generated @number_of_seeds seeds.', array('@number_of_seeds' => $number_of_seeds)));
+  drupal_set_message(t('Successfully generated @number_of_dates dates.', array('@number_of_dates' => $number_of_dates)));
 }
 
 function userpoints_collect_date_save($date) {
