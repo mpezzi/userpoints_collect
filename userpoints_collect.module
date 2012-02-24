@@ -296,7 +296,7 @@ function userpoints_collect_eligibility($account = NULL) {
         return FALSE;
       }
       else {
-        drupal_set_message( t('Next eligibility period from @min to @max', array('@min' => $eligibility_period_min,'@max' => $eligibility_period_max,)) );
+        // drupal_set_message( t('Next eligibility period from @min to @max', array('@min' => $eligibility_period_min,'@max' => $eligibility_period_max,)) );
         return TRUE;
       }
     }
