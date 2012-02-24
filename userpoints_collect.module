@@ -314,6 +314,35 @@ function userpoints_collect_eligibility($account = NULL) {
 }
 
 /**
+ * Returns an array of the min/max interval numbers and timestamps
+ * in which a specified timestamp occurs
+ */
+function userpoints_collect_get_interval_eligibility_range($timestamp) {
+  // predefined interval settings
+  $initial = time(); // start one minute from now
+  $interval = 20;    // how far apart are these eligibility periods
+
+  $range = array();
+  $count = $initial;
+
+  // calculate the range this timestamp falls in
+  while ($count < $timestamp) {
+    $count += $interval;
+    // when counter passes the timestamp,
+    // we know we've reached the max for
+    // the period of eligibility
+    drupal_set_message(t('the count is @count', array('@count' => $count)));
+    if ($count > $timestamp) {
+      $range['max'] = $count;
+      // the min range is 1 interval lower than the max
+      $range['min'] = $count - $interval;
+    }
+  }
+  drupal_set_message(t('the range was from @min to @max', array('@min' => $range['min'], '@max' => $range['max'])));
+  return $range;
+}
+
+/**
  * Retrieves the next timestamp for when the user can collect
  * a point
  */
