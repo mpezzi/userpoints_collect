@@ -1,5 +1,8 @@
 <?php
 
+define('ELIGIBILITY_MODE_ARRAY', 1);
+define('ELIGIBILITY_MODE_INTERVAL', 2);
+
 /**
  * @file
  * Provides a block for users to collect points within time constraints.
