@@ -255,51 +255,55 @@ function userpoints_collect_eligibility($account = NULL) {
       ->fetchObject();
   }
 
-  $last_txn = $last_txns[$account->uid];
-
-  // No transaction? User is eligible.
-  if ( !$last_txn ) {
-    return TRUE;
-  }
   // Check transaction and make sure it falls into the eligible period.
-  else {
+  // get eligible dates from the db
+  $eligibility_period_min = db_select('userpoints_collect_dates', 'd')
+    ->fields('d', array('timestamp'))
+    ->condition('d.timestamp', time(), '<')
+    ->orderBy('d.timestamp', 'DESC')
+    ->range(0,1)
+    ->execute()
+    ->fetchField();
+
+  $eligibility_period_max = db_select('userpoints_collect_dates', 'd')
+    ->fields('d', array('timestamp'))
+    ->condition('d.timestamp', time(), '>')
+    ->orderBy('d.timestamp')
+    ->range(0,1)
+    ->execute()
+    ->fetchField();
+
+  $last_txn = $last_txns[$account->uid];
+  if ($last_txn) {
     $last_timestamp = $last_txn->time_stamp;
+  }
 
-    // get eligible dates from the db
-    $eligibility_period_min = db_select('userpoints_collect_dates', 'd')
-      ->fields('d', array('timestamp'))
-      ->condition('d.timestamp', time(), '<')
-      ->orderBy('d.timestamp', 'DESC')
-      ->range(0,1)
-      ->execute()
-      ->fetchField();
+  // check if valid timestamps were retrieved for min / max
+  // eligibility periods
+  if ( isset($eligibility_period_min) && $eligibility_period_min > 0
+    && isset($eligibility_period_max) && $eligibility_period_max > 0 ) {
 
-    $eligibility_period_max = db_select('userpoints_collect_dates', 'd')
-      ->fields('d', array('timestamp'))
-      ->condition('timestamp', time(), '>')
-      ->orderBy('d.timestamp')
-      ->range(0,1)
-      ->execute()
-      ->fetchField();
-
-    // check if valid timestamps were retrieved for min / max
-    // eligibility periods
-    if ( isset($eligibility_period_min) && $eligibility_period_min > 0
-      && isset($eligibility_period_max) && $eligibility_period_max > 0 ) {
+    if (!isset($last_timestamp)) {
+      // user has no point transactions on record
+      // check current time if it is within eligibility period
+      return $eligibility_period_min < time() && $eligibility_period_max > time();
+    }
+    else {
+      // the user has point transaction(s) on record
       if ( $last_timestamp > $eligibility_period_min
         && $last_timestamp < $eligibility_period_max ) {
         // user's last point claimed is within the eligibility period
         return FALSE;
       }
       else {
-         // drupal_set_message( t('Next eligibility period from @min to @max', array('@min' => $eligibility_period_min,'@max' => $eligibility_period_max,)) );
+        drupal_set_message( t('Next eligibility period from @min to @max', array('@min' => $eligibility_period_min,'@max' => $eligibility_period_max,)) );
         return TRUE;
       }
     }
-    else {
-      // No eligible dates were found in the database
-      return FALSE;
-    }
+  }
+  else {
+    // No eligible dates were found in the database
+    return FALSE;
   }
 
   // Something went wrong.
@@ -330,14 +334,22 @@ function userpoints_collect_next_eligible_time($account = NULL) {
   }
 
   $last_txn = $last_txns[$account->uid];
-  $last_timestamp = $last_txn->time_stamp;
+
+  // handle case where user has no transactions on record
+  if (!$last_txn) {
+    // try to find an eligible time relative to now
+    $last_timestamp = time();
+  }
+  else {
+    $last_timestamp = $last_txn->time_stamp;
+  }
 
   // get eligible dates from the db
   // must be sorted in ASCending order
   $upcoming_eligible_time = db_select('userpoints_collect_dates', 'd')
     ->fields('d', array('timestamp'))
     ->orderBy('d.timestamp')
-    ->condition('timestamp', $last_timestamp, '>')
+    ->condition('d.timestamp', $last_timestamp, '>')
     ->execute();
 
   // determine the final eligible time
