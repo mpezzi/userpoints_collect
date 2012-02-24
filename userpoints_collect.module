@@ -268,15 +268,16 @@ function userpoints_collect_eligibility($account = NULL) {
     // get eligible dates from the db
     $eligibility_period_min = db_select('userpoints_collect_dates', 'd')
       ->fields('d', array('timestamp'))
-      ->condition('timestamp', time(), '>')
-      ->orderBy('timestamp', 'DESC')
+      ->condition('d.timestamp', time(), '<')
+      ->orderBy('d.timestamp', 'DESC')
       ->range(0,1)
       ->execute()
       ->fetchField();
 
     $eligibility_period_max = db_select('userpoints_collect_dates', 'd')
       ->fields('d', array('timestamp'))
-      ->condition('timestamp', time(), '<')
+      ->condition('timestamp', time(), '>')
+      ->orderBy('d.timestamp')
       ->range(0,1)
       ->execute()
       ->fetchField();
@@ -291,6 +292,7 @@ function userpoints_collect_eligibility($account = NULL) {
         return FALSE;
       }
       else {
+         // drupal_set_message( t('Next eligibility period from @min to @max', array('@min' => $eligibility_period_min,'@max' => $eligibility_period_max,)) );
         return TRUE;
       }
     }
@@ -334,8 +336,15 @@ function userpoints_collect_next_eligible_time($account = NULL) {
   // must be sorted in ASCending order
   $upcoming_eligible_time = db_select('userpoints_collect_dates', 'd')
     ->fields('d', array('timestamp'))
-    ->orderBy('timestamp', 'ASC')
+    ->orderBy('d.timestamp')
     ->condition('timestamp', $last_timestamp, '>')
+    ->execute();
+
+  // determine the final eligible time
+  $final_eligible_time = db_select('userpoints_collect_dates', 'd')
+    ->fields('d', array('timestamp'))
+    ->orderBy('d.timestamp', 'DESC')
+    ->range(0,1)
     ->execute();
 
   // if an upcoming eligible time was found, return it
@@ -344,7 +353,11 @@ function userpoints_collect_next_eligible_time($account = NULL) {
     return FALSE;
   }
   else {
-    return $upcoming_eligible_time->fetchField();
+    // the next eligible time must not be the final eligible time
+    // i.e. next eligible time should come before the final eligible time
+    $upcoming_eligible_time = $upcoming_eligible_time->fetchField();
+    $final_eligible_time = $final_eligible_time->fetchField();
+    return $upcoming_eligible_time < $final_eligible_time ? $upcoming_eligible_time : FALSE;
   }
 }
 
