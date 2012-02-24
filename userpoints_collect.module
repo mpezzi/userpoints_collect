@@ -347,9 +347,8 @@ function userpoints_collect_next_eligible_time($account = NULL) {
     ->range(0,1)
     ->execute();
 
-  // if an upcoming eligible time was found, return it
-  // otherwise return FALSE
-  if (!$upcoming_eligible_time) {
+  if (!$upcoming_eligible_time || !$final_eligible_time) {
+    // neither the upcoming nor the final eligible time was specified
     return FALSE;
   }
   else {
