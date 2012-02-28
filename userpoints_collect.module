@@ -388,31 +388,47 @@ function userpoints_collect_dates_get_eligibility_period($timestamp) {
 
     // return false (no eligibility period) if the
     // current time is before first/earliest eligibility period
-    // or the current time is past the last/final eligibility period
+    // or the current time is past the final/latest eligibility period
     if (time() < $times[0] || time() > $times[count($times) - 1]) {
       return FALSE;
     }
 
-    // sort the times in descending order
-    rsort($times, SORT_NUMERIC);
-
     $period = array();
+    $period['first'] = $times[0];
+    $period['final'] = $times[count($times) - 1];
+
+    // sort the times in descending order before
+    // iterating over them
+    rsort($times, SORT_NUMERIC);
 
     // find the minimum/maximum time for the eligibility period
     for ($i = 0; $i < count($times); $i++) {
-      if ($times[$i] < $timestamp && $i > 0) {
-        $period['final'] = $times[0];
-        $period['first'] = $times[count($times) - 1];
-        $period['min'] = $times[$i];
-        $period['max'] = $times[$i - 1];
+      // handle boundary cases
+      if ($times[$i] == $timestamp) {
+        // timestamp = final(latest) timestamp in array
+        if ($i == 0) {
+          $period['min'] = $period['final'];
+          $period['max'] = $times[1];
+        }
+        // timestamp = first(earliest) timestamp in array
+        elseif ($i == count($times) - 1) {
+          $period['min'] = count($times) - 2;
+          $period['max'] = $period['first'];
+        }
+      }
+      else {
+        if ($times[$i] < $timestamp) {
+          $period['min'] = $times[$i];
+          $period['max'] = $times[$i - 1];
 
-        // TODO: Remove after debug
-        $format = "%H:%M:%S";
-        dsm(t('Eligibility period: @min to @max', array(
-          '@min' => strftime($format, $period['min']),
-          '@max' => strftime($format, $period['max']),
-        )));
-        break;
+          // TODO: Remove after debug
+          $format = "%H:%M:%S";
+          dsm(t('Eligibility period: @min to @max', array(
+            '@min' => strftime($format, $period['min']),
+            '@max' => strftime($format, $period['max']),
+            )));
+          break;
+        }
       }
     }
   }
