@@ -377,9 +377,6 @@ function userpoints_collect_dates_get_eligibility_period($timestamp) {
       variable_set('userpoints_collect_dates_array', $times);
     }
 
-    // sort the times in descending order
-    rsort($times, SORT_NUMERIC);
-
     // TODO: remove after debug
     $format = "%H:%M:%S";
     $all_times = "";
@@ -388,32 +385,36 @@ function userpoints_collect_dates_get_eligibility_period($timestamp) {
     }
     dsm(t($all_times));
 
+
     // return false (no eligibility period) if the
     // current time is before first/earliest eligibility period
     // or the current time is past the last/final eligibility period
-    if (time() < $times[count($times) - 1] || time() > $times[0]) {
+    if (time() < $times[0] || time() > $times[count($times) - 1]) {
       return FALSE;
     }
+
+    // sort the times in descending order
+    rsort($times, SORT_NUMERIC);
 
     $period = array();
 
     // find the minimum/maximum time for the eligibility period
-    for ($i = count($times) - 1; $i > 0; $i--) {
-      if ($timestamp < $times[$i]) {
+    for ($i = 0; $i < count($times); $i++) {
+      if ($times[$i] < $timestamp && $i > 0) {
         $period['final'] = $times[0];
-
+        $period['first'] = $times[count($times) - 1];
         $period['min'] = $times[$i];
-        $period['max'] = $times[$i + 1];
+        $period['max'] = $times[$i - 1];
 
+        // TODO: Remove after debug
         $format = "%H:%M:%S";
         dsm(t('Eligibility period: @min to @max', array(
           '@min' => strftime($format, $period['min']),
           '@max' => strftime($format, $period['max']),
         )));
-
+        break;
       }
     }
-
   }
 
   return $period;
