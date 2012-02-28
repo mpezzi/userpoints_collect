@@ -637,10 +637,17 @@ function userpoints_collect_clear_all_points() {
 }
 
 /**
- * Generates an array of ordered or sHuffled timestamps
+ * Clears out userpoints_collect timestamp timestamps set in variables table
+ */
+function userpoints_collect_dates_clear_array() {
+  variable_del('userpoints_collect_dates_array');
+}
+
+/**
+ * Generates an array of ordered or shuffled timestamps
  *
- * @param $randomized
- *    randomizes the difference between dates
+ * @param $random_dist
+ *    randomizes the distribution (time between dates)
  * @param $shuffle
  *    shuffles the elements of the array
  * @param $number_of_timestamps
@@ -648,14 +655,13 @@ function userpoints_collect_clear_all_points() {
  * @param $minutes_apart
  *    the number of minutes between each timestamp in the array
  */
-function userpoints_collect_dates_array_generate($randomized = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
+function userpoints_collect_dates_array_generate($random_dist = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
   $dates = array();
 
-  // if randomized, a multiplier (from 1-5) will be factored into each date
-  $randomized == TRUE ? $multiplier = 1 : $multiplier = rand(1, 5);
-
   for ( $i = 1; $i <= $number_of_timestamps; $i++ ) {
-    array_push($dates, (time() + ($i * $minutes_apart * $multiplier * 60)) );
+    // if random_dist is true, a multiplier (from 1-5) will be factored into each date
+    $random_dist == TRUE ? $multiplier = rand(1, 5) : $multiplier = 1;
+    array_push($dates, time() + ($i * $minutes_apart * $multiplier * 60) );
   }
 
   if ($shuffle == TRUE) {
@@ -663,11 +669,11 @@ function userpoints_collect_dates_array_generate($randomized = FALSE, $shuffle =
   }
 
   drupal_set_message(
-    t('Successfully generated @number_of_timestamps @randomized dates, @minutes_apart @min_pluralized apart@shuffled', array(
-      '@randomized' => $randomized == TRUE ? 'randomized' : 'ordered',
+    t('Successfully generated an array of @number_of_timestamps @random_dist dates, @minutes_apart @min_pluralized apart@shuffled', array(
+      '@random_dist' => $random_dist == TRUE ? 'randomly distributed' : 'evenly distributed',
       '@number_of_timestamps' => $number_of_timestamps,
-      '@minutes_apart' => $minutes_apart,
-      '@min_pluralized' => format_plural($minutes_apart, 'minute', 'minutes'),
+      '@minutes_apart' => $random_dist == TRUE ? 'x' : $minutes_apart,
+      '@min_pluralized' => $random_dist == TRUE ? "minutes" : format_plural($minutes_apart, 'minute', 'minutes'),
       '@shuffled' => $shuffle == TRUE ? ', and then shuffled them.' : '.',
       )
     )
@@ -678,8 +684,9 @@ function userpoints_collect_dates_array_generate($randomized = FALSE, $shuffle =
 /**
  * Saves an array of timestamps to Drupal's variables table
  */
-function userpoints_collect_dates_save_array() {
-  $dates = userpoints_collect_dates_array_generate();
+function userpoints_collect_dates_generate_and_save_array($randomized = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
+  userpoints_collect_dates_clear_array();
+  $dates = userpoints_collect_dates_array_generate($randomized, $shuffle, $number_of_timestamps, $minutes_apart);
   variable_set('userpoints_collect_dates_array', $dates);
 }
 
