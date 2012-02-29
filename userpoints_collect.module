@@ -355,18 +355,18 @@ function userpoints_collect_dates_get_eligibility_period($timestamp) {
     }
 
     // TODO: remove after debug
-    $format = "%H:%M:%S";
-    dsm(t('Interval settings: @initial, @interval, @final', array(
-      '@initial' => strftime($format, $interval_settings['initial']),
-      '@interval' => $interval_settings['interval'],
-      '@final' => strftime($format, $interval_settings['final']),
-    )));
+    // $format = "%H:%M:%S";
+    // dsm(t('Interval settings: @initial, @interval, @final', array(
+    //   '@initial' => strftime($format, $interval_settings['initial']),
+    //   '@interval' => $interval_settings['interval'],
+    //   '@final' => strftime($format, $interval_settings['final']),
+    // )));
 
 
-    dsm(t('Eligibility period: @min to @max', array(
-      '@min' => strftime($format, $period['min']),
-      '@max' => strftime($format, $period['max']),
-    )));
+    // dsm(t('Eligibility period: @min to @max', array(
+    //   '@min' => strftime($format, $period['min']),
+    //   '@max' => strftime($format, $period['max']),
+    // )));
 
   }
   else {
@@ -378,12 +378,12 @@ function userpoints_collect_dates_get_eligibility_period($timestamp) {
     }
 
     // TODO: remove after debug
-    $format = "%H:%M:%S";
-    $all_times = "";
-    for ($i = 0; $i < count($times); $i++) {
-      $all_times .= strftime($format, $times[$i]) . " ";
-    }
-    dsm(t($all_times));
+    // $format = "%H:%M:%S";
+    //     $all_times = "";
+    //     for ($i = 0; $i < count($times); $i++) {
+    //       $all_times .= strftime($format, $times[$i]) . " ";
+    //     }
+    // dsm(t($all_times));
 
 
     // return false (no eligibility period) if the
@@ -422,11 +422,11 @@ function userpoints_collect_dates_get_eligibility_period($timestamp) {
           $period['max'] = $times[$i - 1];
 
           // TODO: Remove after debug
-          $format = "%H:%M:%S";
-          dsm(t('Eligibility period: @min to @max', array(
-            '@min' => strftime($format, $period['min']),
-            '@max' => strftime($format, $period['max']),
-            )));
+          // $format = "%H:%M:%S";
+          // dsm(t('Eligibility period: @min to @max', array(
+          //   '@min' => strftime($format, $period['min']),
+          //   '@max' => strftime($format, $period['max']),
+          //   )));
           break;
         }
       }
