@@ -525,46 +525,15 @@ function userpoints_collect_next_eligible_time() {
 /**
  * Returns the timeleft for collect eligibility.
  */
-function userpoints_collect_eligibility_timeleft($granularity = 2) {
+function userpoints_collect_eligibility_timeleft() {
   $next_eligible = userpoints_collect_next_eligible_time();
 
-  if ($next_eligible) {
-    $seconds = $next_eligible - time();
-
-    // $seconds = mktime(0, 0, 0) + 86400 - time();
-    $units = array(
-      '1 year|:count years' => 31536000,
-      '1 week|:count weeks' => 604800,
-      '1 day|:count days' => 86400,
-      '1 hour|:count hours' => 3600,
-      '1 min|:count min' => 60,
-      '1 sec|:count sec' => 1
-      );
-    $output = '';
-    foreach ($units as $key => $value) {
-      $key = explode('|', $key);
-      if ($seconds >= $value) {
-        $count = floor($seconds / $value);
-        $output .= ($output ? ' ' : '');
-        if ($count == 1) {
-          $output .= $key[0];
-        } else {
-          $output .= str_replace(':count', $count, $key[1]);
-        }
-        $seconds %= $value;
-        $granularity--;
-      }
-      if ($granularity == 0) {
-        break;
-      }
-    }
-
+  if ($next_eligible && $next_eligible > 0) {
+    return format_interval($next_eligible - time());
   }
   else {
     return FALSE;
   }
-
-  return $output ? $output : '0 sec';
 }
 
 /**
