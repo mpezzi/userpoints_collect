@@ -410,8 +410,6 @@ function userpoints_collect_dates_get_eligibility_period($timestamp) {
     // Uncomment below to set interval settings array in db vars table
     // userpoints_collect_date_set_interval_defaults();
 
-    // load the first / final eligibility times into
-    // $period for reference
     $period = array(
       'first' => $interval_settings['initial'],
       'final' => $interval_settings['final'],
@@ -426,12 +424,8 @@ function userpoints_collect_dates_get_eligibility_period($timestamp) {
       // we know we've reached the max for the period of eligibility
       if ($count >= $timestamp) {
         $period['max'] = $count;
-        // the min range is 1 interval lower than the max
         $period['min'] = $count - $interval_settings['interval'];
       }
-
-      // TODO: remove below, only for debug
-      // dsm(t('the count is @count', array('@count' => $count)));
     }
 
     // TODO: remove after debug
