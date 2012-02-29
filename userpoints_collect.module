@@ -453,7 +453,7 @@ function userpoints_collect_dates_get_eligibility_period($timestamp) {
     // Array based calculation
     $times = variable_get('userpoints_collect_dates_array', NULL);
     if (is_null($times)) {
-      $times = userpoints_collect_dates_array_generate();
+      $times = userpoints_collect_dates_generate_array();
       variable_set('userpoints_collect_dates_array', $times);
     }
 
@@ -751,9 +751,9 @@ function userpoints_collect_dates_clear_array() {
  * @param $minutes_apart
  *    the number of minutes between each timestamp in the array
  */
-function userpoints_collect_dates_array_generate($random_dist = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
+function userpoints_collect_dates_generate_array($random_dist = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
   $dates = array();
-
+  // array_push($dates, time() + 10);
   for ( $i = 1; $i <= $number_of_timestamps; $i++ ) {
     // if random_dist is true, a multiplier (from 1-5) will be factored into each date
     $random_dist == TRUE ? $multiplier = rand(1, 5) : $multiplier = 1;
@@ -782,7 +782,7 @@ function userpoints_collect_dates_array_generate($random_dist = FALSE, $shuffle 
  */
 function userpoints_collect_dates_generate_and_save_array($randomized = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
   userpoints_collect_dates_clear_array();
-  $dates = userpoints_collect_dates_array_generate($randomized, $shuffle, $number_of_timestamps, $minutes_apart);
+  $dates = userpoints_collect_dates_generate_array($randomized, $shuffle, $number_of_timestamps, $minutes_apart);
   variable_set('userpoints_collect_dates_array', $dates);
 }
 
