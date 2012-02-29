@@ -141,6 +141,84 @@ function userpoints_collect_block_info() {
 }
 
 /**
+ * Implements hook_block_configure().
+ */
+function userpoints_collect_block_configure($delta = '') {
+  // This example comes from node.module.
+  $form = array();
+
+  // retrieve config array from db
+  $config = variable_get('userpoints_collect_form_config', NULL);
+
+  // default collect config form settings
+  $defaults = array(
+    'submit_label' => t('Collect now!'),
+    'return_label' => t('Back to Facebook'),
+    'return_url' => 'http://facebook.com',
+    'no_ballots_label' => t('No more ballots remaining'),
+    'next_ballot_label' => t('Next ballot available in @timeleft'),
+  );
+
+  if ($config == NULL) {
+    $config = $defaults;
+  }
+
+  if ($delta == 'userpoints_collect') {
+    $form['submit_label'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Submit Button label'),
+      '#required' => TRUE,
+      '#default_value' => $config['submit_label'],
+    );
+    $form['return_label'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Return to Site label'),
+      '#required' => TRUE,
+      '#default_value' => $config['return_label'],
+    );
+    $form['return_url'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Return to Site URL'),
+      '#required' => TRUE,
+      '#default_value' => $config['return_url'],
+    );
+    $form['no_ballots_label'] = array(
+      '#type' => 'textfield',
+      '#title' => t('No ballots remaining label'),
+      '#required' => TRUE,
+      '#default_value' => $config['no_ballots_label'],
+    );
+    $form['next_ballot_label'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Next ballot available in... label'),
+      '#description' => 'Label must contain @timeleft to indicate where time left until next ballot should be displayed',
+      '#required' => TRUE,
+      '#default_value' => $config['next_ballot_label'],
+    );
+
+  }
+  return $form;
+}
+
+/**
+ * Implements hook_block_save().
+ */
+function userpoints_collect_block_save($delta = '', $edit = array()) {
+  // This example comes from node.module.
+  if ($delta == 'userpoints_collect') {
+    $config = array(
+      'submit_label' => $edit['submit_label'],
+      'return_label' => $edit['return_label'],
+      'return_url' => $edit['return_url'],
+      'no_ballots_label' => $edit['no_ballots_label'],
+      'next_ballot_label' => $edit['next_ballot_label']
+    );
+
+    variable_set('userpoints_collect_form_config', $config);
+  }
+}
+
+/**
  * Implements hook_block_view().
  */
 function userpoints_collect_block_view($delta = '') {
@@ -158,11 +236,13 @@ function userpoints_collect_form($form, &$form_state) {
   global $user;
   $access = userpoints_collect_access();
 
+  $config = variable_get('userpoints_collect_form_config', NULL);
+
   if ( $access ) {
     $form['submit'] = array(
       //'#disabled' => !$access,
       '#type' => 'submit',
-      '#value' => t('Collect Now'),
+      '#value' => t($config['submit_label']),
     );
   }
   else {
@@ -170,11 +250,11 @@ function userpoints_collect_form($form, &$form_state) {
     $form['link'] = array(
       '#prefix' => '<p>',
       '#suffix' => '</p>',
-      '#markup' => l('Back to Facebook', 'http://facebook.com', array('attributes' => array('class' => array('btn', 'btn-large', 'btn-primary')))),
+      '#markup' => l(t($config['return_label']), $config['return_url'], array('attributes' => array('class' => array('btn', 'btn-large', 'btn-primary')))),
     );
 
     $timeleft = userpoints_collect_eligibility_timeleft();
-    $ballot_message = !$timeleft ? 'No more ballots remaining.' : t('Next ballot available in @timeleft.', array('@timeleft' => $timeleft));
+    $ballot_message = !$timeleft ? t($config['no_ballots_label']) : t($config['next_ballot_label'], array('@timeleft' => $timeleft));
 
     $form['timeleft'] = array(
       '#markup' => $ballot_message,
