@@ -336,34 +336,51 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
     // return false (no eligibility period) if the
     // current time is before first/earliest eligibility period
     // or the current time is past the final/latest eligibility period
-    if ($timestamp < $interval_settings['first'] || $timestamp > $interval_settings['final']) {
+    if ($timestamp < $interval_settings['first']) {
+      return FALSE;
+    }
+    elseif (isset($interval_settings['final']) && $timestamp > $interval_settings['final']) {
       return FALSE;
     }
 
     $period = array(
       'first' => $interval_settings['first'],
-      'final' => $interval_settings['final'],
     );
 
-    $count = $interval_settings['first'];
+    // set the final eligiblity timestamp if it was set
+    // to a definite time
+    if ( !is_null($interval_settings['final']) ) {
+      $period['final'] = $interval_settings['final'];
+    }
 
-    // calculate the range this timestamp falls in
-    while ($count < $timestamp) {
-      $count += $interval_settings['interval'];
-      // when counter passes the timestamp,
-      // we know we've reached the max for the period of eligibility
-      if ($count >= $timestamp) {
-        $period['max'] = $count;
-        $period['min'] = $count - $interval_settings['interval'];
-      }
+    // calculate the max/min period timestamps using
+    // the number of intervals it takes to count up
+    // to the specified timestamp
+    $num_intervals = ($timestamp - $interval_settings['first']) / $interval_settings['interval'];
+    if ( ($timestamp - $interval_settings['first']) % $interval_settings['interval'] == 0) {
+      // if the interval size divides timestamp evenly,
+      // then timestamp falls right onto an interval min (the start of an interval)
+      $period['min'] = $interval_settings['first'] + $num_intervals * $interval_settings['interval'];
+      $period['max'] = $interval_settings['first'] + ($num_intervals + 1) * $interval_settings['interval'];
+    }
+    else {
+      // if num_intervals isn't a whole number, timestamp falls
+      // in the middle of an interval.  ex. a number_intervals of 2.4
+      // rounds down to 2 intervals (min_intervals) and rounds up
+      // to 3 intervals (max_intervals)
+      $min_intervals = floor($num_intervals);
+      $max_intervals = ceil($num_intervals);
+
+      $period['min'] = $interval_settings['first'] + $min_intervals * $interval_settings['interval'];
+      $period['max'] = $interval_settings['first'] + $max_intervals * $interval_settings['interval'];
     }
 
     // TODO: remove after debug
     // $format = "%H:%M:%S";
-    // dsm(t('Interval settings: @initial, @interval, @final', array(
+    // dsm(t('Interval settings: @first, @interval, @final', array(
     //   '@first' => strftime($format, $interval_settings['first']),
     //   '@interval' => $interval_settings['interval'],
-    //   '@final' => strftime($format, $interval_settings['final']),
+    //   // '@final' => strftime($format, $interval_settings['final']),
     // )));
     // dsm(t('Eligibility period: @min to @max', array(
     //   '@min' => strftime($format, $period['min']),
@@ -445,8 +462,16 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
 function userpoints_collect_next_eligible_time() {
   $period = userpoints_collect_dates_get_eligibility_period();
   // return the period max (upcoming time) only if that max
-  // isn't the last eligible time
-  return $period['max'] < $period['final'] ? $period['max'] : FALSE;
+  // is not set to NULL (i.e. there IS a definite eligibility endpoint)
+  // and if the max isn't the last eligible time
+  if (isset($period['final']) && !is_null($period['final'])) {
+    return $period['max'] < $period['final'] ? $period['max'] : FALSE;
+  }
+  else {
+    // otherwise always return the max for timestamp
+    // the eligibility period
+    return $period['max'];
+  }
 }
 
 /**
@@ -528,19 +553,21 @@ function userpoints_collect_date_clear_interval_settings() {
  *    the time in seconds that each period of eligibility should last
  *    default: 180 (3 minutes)
  * @param $repeat
- *    the number of intervals
- *    default: 10
+ *    the number of intervals.  Set to NULL to repeat indefinitely
+ *    default: NULL
  */
-function userpoints_collect_date_set_interval_settings($interval_length = 180, $repeat = 10) {
+function userpoints_collect_date_set_interval_settings($interval_length = 180, $start = NULL, $repeat = NULL) {
   userpoints_collect_date_clear_interval_settings();
   $interval_settings = array();
-  $interval_settings['first'] = time() + 10;
+  $interval_settings['first'] = is_null($start) ? time() + 10 : $start;
   $interval_settings['interval'] = $interval_length;
-  $interval_settings['final'] = time() + $interval_length * $repeat;
+
+  // check if repeat is set to be indefinite
+  is_null($repeat) ? $interval_settings['final'] = NULL : $interval_settings['final'] = $interval_settings['first'] + $interval_length * $repeat;
   variable_set('userpoints_collect_dates_interval', $interval_settings);
   drupal_set_message(
      t('Successfully generated @repeat intervals, @secs_apart @sec_pluralized apart.', array(
-       '@repeat' => $repeat,
+       '@repeat' => is_null($repeat) ? 'x' : $repeat,
        '@secs_apart' => $interval_length,
        '@sec_pluralized' => format_plural($secs_apart, 'second', 'seconds')
        )
@@ -558,7 +585,7 @@ function userpoints_collect_date_load_default_interval_settings() {
   $interval_settings = array();
   $interval_settings['first'] = time() + 10;
   $interval_settings['interval'] = 60;
-  $interval_settings['final'] = time() + $interval_settings['interval'] * 10;
+  $interval_settings['final'] = $interval_settings['first'] + $interval_settings['interval'] * 10;
   return $interval_settings;
 }
 
