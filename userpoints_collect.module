@@ -1,12 +1,12 @@
 <?php
 
-define('ELIGIBILITY_MODE_ARRAY', 1);
-define('ELIGIBILITY_MODE_INTERVAL', 2);
-
 /**
  * @file
  * Provides a block for users to collect points within time constraints.
  */
+
+define('USERPOINTS_COLLECT_MODE_ARRAY', 1);
+define('USERPOINTS_COLLECT_MODE_INTERVAL', 2);
 
 /**
  * Implements hook_menu().
@@ -395,9 +395,14 @@ function userpoints_collect_eligibility($account = NULL) {
  *
  * @param $timestamp
  *    the unix timestamp to get eligibility period for
+ *    will default to current time if not specified
  */
-function userpoints_collect_dates_get_eligibility_period($timestamp) {
-  if ( (int)variable_get('userpoints_collect_dates_eligibility_mode') == ELIGIBILITY_MODE_INTERVAL) {
+function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
+  if (is_null($timestamp)) {
+    $timestamp = time();
+  }
+
+  if ( (int)variable_get('userpoints_collect_dates_eligibility_mode', USERPOINTS_COLLECT_MODE_INTERVAL) == USERPOINTS_COLLECT_MODE_INTERVAL) {
     // retrieve interval settings from variables table and do
     // an interval-based calculation for next eligibility period
     $interval_settings = variable_get('userpoints_collect_dates_interval', NULL);
