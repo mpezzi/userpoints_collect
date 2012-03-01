@@ -54,17 +54,8 @@ function userpoints_collect_block_configure($delta = '') {
   // retrieve config array from db
   $config = variable_get('userpoints_collect_form_config', NULL);
 
-  // default collect config form settings
-  $defaults = array(
-    'submit_label' => t('Collect now!'),
-    'return_label' => t('Back to Facebook'),
-    'return_url' => 'http://facebook.com',
-    'no_ballots_label' => t('No more ballots remaining'),
-    'next_ballot_label' => t('Next ballot available in @timeleft'),
-  );
-
   if ($config == NULL) {
-    $config = $defaults;
+    $config = userpoints_collect_form_defaults();
   }
 
   if ($delta == 'userpoints_collect') {
@@ -99,9 +90,30 @@ function userpoints_collect_block_configure($delta = '') {
       '#required' => TRUE,
       '#default_value' => $config['next_ballot_label'],
     );
+    $form['after_collect_path'] = array(
+      '#type' => 'textfield',
+      '#title' => t('After collect path'),
+      '#description' => 'Redirect to this path after user collects a point',
+      '#required' => TRUE,
+      '#default_value' => $config['after_collect_path'],
+    );
 
   }
   return $form;
+}
+
+/**
+ * Returns an array of defaults for userpoints_collect config form
+ */
+function userpoints_collect_form_defaults() {
+  return array(
+    'submit_label' => t('Collect now!'),
+    'return_label' => t('Back to Facebook'),
+    'return_url' => 'http://facebook.com',
+    'no_ballots_label' => t('No more ballots remaining'),
+    'next_ballot_label' => t('Next ballot available in @timeleft'),
+    'after_collect_path' => '<front>',
+  );
 }
 
 /**
@@ -115,7 +127,8 @@ function userpoints_collect_block_save($delta = '', $edit = array()) {
       'return_label' => $edit['return_label'],
       'return_url' => $edit['return_url'],
       'no_ballots_label' => $edit['no_ballots_label'],
-      'next_ballot_label' => $edit['next_ballot_label']
+      'next_ballot_label' => $edit['next_ballot_label'],
+      'after_collect_path' => $edit['after_collect_path'],
     );
 
     variable_set('userpoints_collect_form_config', $config);
@@ -185,6 +198,10 @@ function userpoints_collect_form_submit($form, &$form_state) {
     'uid' => $user->uid,
     'points' => 1,
   ));
+
+  $config = variable_get('userpoints_collect_form_config', userpoints_collect_form_defaults());
+
+  $form_state['redirect'] = $config['after_collect_path'];
 }
 
 /**
@@ -316,8 +333,12 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
       $interval_settings = userpoints_collect_date_load_default_interval_settings();
     }
 
-    // Uncomment below to set interval settings array in db vars table
-    // userpoints_collect_date_set_interval_defaults();
+    // return false (no eligibility period) if the
+    // current time is before first/earliest eligibility period
+    // or the current time is past the final/latest eligibility period
+    if ($timestamp < $interval_settings['first'] || $timestamp > $interval_settings['final']) {
+      return FALSE;
+    }
 
     $period = array(
       'first' => $interval_settings['first'],
