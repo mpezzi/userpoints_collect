@@ -526,7 +526,7 @@ function userpoints_collect_next_eligible_time() {
 }
 
 /**
- * Returns the timeleft for collect eligibility.
+ * Returns the time left for collect eligibility.
  */
 function userpoints_collect_eligibility_timeleft() {
   $next_eligible = userpoints_collect_next_eligible_time();
@@ -723,7 +723,7 @@ function userpoints_collect_dates_generate_array($random_dist = FALSE, $shuffle 
   for ( $i = 1; $i <= $number_of_timestamps; $i++ ) {
     // if random_dist is true, a multiplier (from 1-5) will be factored into each date
     $random_dist == TRUE ? $multiplier = rand(1, 5) : $multiplier = 1;
-    array_push($dates, time() + ($i * $minutes_apart * $multiplier * 60) );
+    array_push( $dates, time() + ($i * $minutes_apart * $multiplier * 60) );
   }
 
   if ($shuffle == TRUE) {
