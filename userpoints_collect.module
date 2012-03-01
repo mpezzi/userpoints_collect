@@ -346,7 +346,7 @@ function userpoints_collect_eligibility($account = NULL) {
 
   // get the eligibility period (min and max timestamp)
   // that the current time would fall into
-  $period = userpoints_collect_dates_get_eligibility_period(time());
+  $period = userpoints_collect_dates_get_eligibility_period();
   // if period returns false, it means there are no periods of eligibility
   // (at least not yet)
   if (!$period) {
@@ -464,7 +464,6 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
     //     }
     // dsm(t($all_times));
 
-
     // return false (no eligibility period) if the
     // current time is before first/earliest eligibility period
     // or the current time is past the final/latest eligibility period
@@ -520,8 +519,7 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
  * a point, or false if there are no upcoming eligible times.
  */
 function userpoints_collect_next_eligible_time() {
-  // the next time period is relative to now
-  $period = userpoints_collect_dates_get_eligibility_period(time());
+  $period = userpoints_collect_dates_get_eligibility_period();
   // return the period max (upcoming time) only if that max
   // isn't the last eligible time
   return $period['max'] < $period['final'] ? $period['max'] : FALSE;
