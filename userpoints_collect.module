@@ -494,59 +494,6 @@ function template_preprocess_userpoints_collect_form(&$variables) {
 }
 
 /**
- * Various functions for clearing, generating and saving
- * new eligible dates to the database
- */
-
-/**
- * Clear all dates.
- */
-function userpoints_collect_dates_clear() {
-  db_truncate('userpoints_collect_dates')->execute();
-  drupal_set_message(t('Cleared all dates'));
-}
-
-/**
- * Generate dates.
- */
-function userpoints_collect_dates_generate($number_of_dates = 5, $minutes_apart = 1) {
-  userpoints_collect_dates_clear();
-  for ( $i = 1; $i <= $number_of_dates; $i++ ) {
-    $date = (object) array(
-      'timestamp' => time() + ( $i * $minutes_apart * 60 ),
-    );
-    userpoints_collect_date_save($date);
-  }
-
-  drupal_set_message(
-    t('Successfully generated @number_of_dates dates, @minutes_apart @min_pluralized apart.', array(
-      '@number_of_dates' => $number_of_dates,
-      '@minutes_apart' => $minutes_apart,
-      '@min_pluralized' => format_plural($minutes_apart, 'minute', 'minutes')
-      )
-    )
-  );
-}
-
-function userpoints_collect_date_save($date) {
-  $date->is_new = empty($date->id);
-  if ($date->is_new) {
-    drupal_write_record('userpoints_collect_dates', $date);
-  }
-  else {
-    drupal_write_record('userpoints_collect_dates', $date, 'id');
-  }
-}
-
-function userpoints_collect_date_load($id) {
-  return db_select('userpoints_collect_dates', 'u')
-    ->fields('u')
-    ->condition('id', $id)
-    ->execute()
-    ->fetchObject();
-}
-
-/**
  * Removes any userpoints_collect date interval settings from the database
  */
 function userpoints_collect_date_clear_interval_settings() {
