@@ -312,7 +312,7 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
     $interval_settings = variable_get('userpoints_collect_dates_interval', NULL);
     if (is_null($interval_settings)) {
       // default interval settings
-      // create ten 3-minute intervals starting 1 minute from now
+      // create ten 3-minute intervals starting 10 seconds from now
       $interval_settings = userpoints_collect_date_load_default_interval_settings();
     }
 
@@ -320,11 +320,11 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
     // userpoints_collect_date_set_interval_defaults();
 
     $period = array(
-      'first' => $interval_settings['initial'],
+      'first' => $interval_settings['first'],
       'final' => $interval_settings['final'],
     );
 
-    $count = $interval_settings['initial'];
+    $count = $interval_settings['first'];
 
     // calculate the range this timestamp falls in
     while ($count < $timestamp) {
@@ -340,7 +340,7 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
     // TODO: remove after debug
     // $format = "%H:%M:%S";
     // dsm(t('Interval settings: @initial, @interval, @final', array(
-    //   '@initial' => strftime($format, $interval_settings['initial']),
+    //   '@first' => strftime($format, $interval_settings['first']),
     //   '@interval' => $interval_settings['interval'],
     //   '@final' => strftime($format, $interval_settings['final']),
     // )));
@@ -566,7 +566,7 @@ function userpoints_collect_date_clear_interval_settings() {
 function userpoints_collect_date_set_interval_settings($interval_length = 180, $repeat = 10) {
   userpoints_collect_date_clear_interval_settings();
   $interval_settings = array();
-  $interval_settings['initial'] = time() + 60;
+  $interval_settings['first'] = time() + 10;
   $interval_settings['interval'] = $interval_length;
   $interval_settings['final'] = time() + $interval_length * $repeat;
   variable_set('userpoints_collect_dates_interval', $interval_settings);
@@ -582,12 +582,13 @@ function userpoints_collect_date_set_interval_settings($interval_length = 180, $
 
 /**
  * Returns an array containing the default interval settings
- * i.e. an array of ten timestamps, spaced in one-minute intervals
- *      starting one minute from now
+ *
+ * Specifically, returns an array of ten timestamps, spaced in one-minute
+ *  intervals starting ten seconds from now
  */
 function userpoints_collect_date_load_default_interval_settings() {
   $interval_settings = array();
-  $interval_settings['initial'] = time() + 60;
+  $interval_settings['first'] = time() + 10;
   $interval_settings['interval'] = 60;
   $interval_settings['final'] = time() + $interval_settings['interval'] * 10;
   return $interval_settings;
