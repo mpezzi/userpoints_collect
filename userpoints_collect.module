@@ -8,7 +8,6 @@
 define('USERPOINTS_COLLECT_MODE_ARRAY', 1);
 define('USERPOINTS_COLLECT_MODE_INTERVAL', 2);
 
-
 /**
  * Implements hook_permission().
  */
@@ -314,7 +313,7 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
     if (is_null($interval_settings)) {
       // default interval settings
       // create ten 3-minute intervals starting 1 minute from now
-      $interval_settings = userpoints_collect_date_load_interval_settings();
+      $interval_settings = userpoints_collect_date_load_default_interval_settings();
     }
 
     // Uncomment below to set interval settings array in db vars table
@@ -345,8 +344,6 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
     //   '@interval' => $interval_settings['interval'],
     //   '@final' => strftime($format, $interval_settings['final']),
     // )));
-
-
     // dsm(t('Eligibility period: @min to @max', array(
     //   '@min' => strftime($format, $period['min']),
     //   '@max' => strftime($format, $period['max']),
@@ -410,6 +407,7 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
           //   '@min' => strftime($format, $period['min']),
           //   '@max' => strftime($format, $period['max']),
           //   )));
+
           break;
         }
       }
@@ -655,11 +653,4 @@ function userpoints_collect_dates_generate_and_save_array($randomized = FALSE, $
   userpoints_collect_dates_clear_array();
   $dates = userpoints_collect_dates_generate_array($randomized, $shuffle, $number_of_timestamps, $minutes_apart);
   variable_set('userpoints_collect_dates_array', $dates);
-}
-
-/**
- * Returns an array of dates from the Drupal variables table
- */
-function userpoints_collect_dates_load_array() {
-  return variable_get('userpoints_collect_dates_array', FALSE);
 }
