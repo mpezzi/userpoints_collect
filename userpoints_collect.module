@@ -6,7 +6,7 @@
  */
 
 
-define('USERPOINTS_COLLECT_MODE_ARRAY', 1);
+define('USERPOINTS_COLLECT_MODE_SERIES', 1);
 define('USERPOINTS_COLLECT_MODE_INTERVAL', 2);
 
 /**
@@ -85,6 +85,7 @@ function userpoints_collect_block_view($delta = '') {
  */
 function userpoints_collect_config($variable = NULL) {
   $config = array(
+    'mode' => variable_get('userpoints_collect_mode', USERPOINTS_COLLECT_MODE_INTERVAL),
     'submit_label' => variable_get('userpoints_collect_submit_label', 'Collect now!'),
     'return_label' => variable_get('userpoints_collect_return_label', 'Back to Facebook'),
     'return_url' => variable_get('userpoints_collect_return_url', 'http://facebook.com'),
@@ -212,7 +213,7 @@ function userpoints_collect_eligibility($account = NULL) {
   }
 
   // Get the eligibility period (min and max timestamp) that the current time would fall into
-  $period = userpoints_collect_dates_get_eligibility_period();
+  $period = userpoints_collect_eligibility_period();
 
   // If period returns false, it means there are no periods of eligibility (at least not yet)
   if ( $period ) {
@@ -250,143 +251,168 @@ function userpoints_collect_eligibility($account = NULL) {
 }
 
 /**
- * Returns an array of the min/max interval timestamps
- * in which a specified timestamp occurs
+ * Returns eligibility information for a timestamp.
  *
  * @param $timestamp
- *    the unix timestamp to get eligibility period for
- *    will default to current time if not specified
+ *   A timestamp to check eligibility for.
+ * @return
+ *   A array containing min, max, first and final or FALSE.
  */
-function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
-  if (is_null($timestamp)) {
+function userpoints_collect_eligibility_period($timestamp = NULL) {
+  if ( is_null($timestamp) ) {
     $timestamp = time();
   }
 
-  if ( (int)variable_get('userpoints_collect_dates_eligibility_mode', USERPOINTS_COLLECT_MODE_INTERVAL) == USERPOINTS_COLLECT_MODE_INTERVAL) {
-    // retrieve interval settings from variables table and do
-    // an interval-based calculation for next eligibility period
-    $interval_settings = variable_get('userpoints_collect_dates_interval', NULL);
-    if (is_null($interval_settings)) {
-      // default interval settings
-      // create ten 3-minute intervals starting 10 seconds from now
-      $interval_settings = userpoints_collect_date_load_default_interval_settings();
-    }
+  switch ( userpoints_collect_config('mode') ) {
+    case USERPOINTS_COLLECT_MODE_INTERVAL:
+      return userpoints_collect_eligibility_period_interval($timestamp);
+    case USERPOINTS_COLLECT_MODE_SERIES:
+      return userpoints_collect_eligibility_period_series($timestamp);
+  }
 
-    // return false (no eligibility period) if the
-    // current time is before first/earliest eligibility period
-    // or the current time is past the final/latest eligibility period
-    if ($timestamp < $interval_settings['first']) {
-      return FALSE;
-    }
-    elseif (isset($interval_settings['final']) && $timestamp > $interval_settings['final']) {
-      return FALSE;
-    }
+  return FALSE;
+}
 
-    $period = array(
-      'first' => $interval_settings['first'],
-    );
+/**
+ * Returns eligibility information for interval based time checking.
+ *
+ * @param $timestamp
+ *   A timestamp to check eligibility for.
+ * @return
+ *   A array containing min, max, first and final or FALSE.
+ */
+function userpoints_collect_eligibility_period_interval($timestamp) {
+  // retrieve interval settings from variables table and do
+  // an interval-based calculation for next eligibility period
+  $interval_settings = variable_get('userpoints_collect_dates_interval', NULL);
+  if (is_null($interval_settings)) {
+    // default interval settings
+    // create ten 3-minute intervals starting 10 seconds from now
+    $interval_settings = userpoints_collect_date_load_default_interval_settings();
+  }
 
-    // set the final eligiblity timestamp if it was set
-    // to a definite time
-    if ( !is_null($interval_settings['final']) ) {
-      $period['final'] = $interval_settings['final'];
-    }
+  // return false (no eligibility period) if the
+  // current time is before first/earliest eligibility period
+  // or the current time is past the final/latest eligibility period
+  if ($timestamp < $interval_settings['first']) {
+    return FALSE;
+  }
+  elseif (isset($interval_settings['final']) && $timestamp > $interval_settings['final']) {
+    return FALSE;
+  }
 
-    // calculate the max/min period timestamps using
-    // the number of intervals it takes to count up
-    // to the specified timestamp
-    $num_intervals = ($timestamp - $interval_settings['first']) / $interval_settings['interval'];
-    if ( ($timestamp - $interval_settings['first']) % $interval_settings['interval'] == 0) {
-      // if the interval size divides timestamp evenly,
-      // then timestamp falls right onto an interval min (the start of an interval)
-      $period['min'] = $interval_settings['first'] + $num_intervals * $interval_settings['interval'];
-      $period['max'] = $interval_settings['first'] + ($num_intervals + 1) * $interval_settings['interval'];
-    }
-    else {
-      // if num_intervals isn't a whole number, timestamp falls
-      // in the middle of an interval.  ex. a number_intervals of 2.4
-      // rounds down to 2 intervals (min_intervals) and rounds up
-      // to 3 intervals (max_intervals)
-      $min_intervals = floor($num_intervals);
-      $max_intervals = ceil($num_intervals);
+  $period = array(
+    'first' => $interval_settings['first'],
+  );
 
-      $period['min'] = $interval_settings['first'] + $min_intervals * $interval_settings['interval'];
-      $period['max'] = $interval_settings['first'] + $max_intervals * $interval_settings['interval'];
-    }
+  // set the final eligiblity timestamp if it was set
+  // to a definite time
+  if ( !is_null($interval_settings['final']) ) {
+    $period['final'] = $interval_settings['final'];
+  }
 
-    // TODO: remove after debug
-    // $format = "%H:%M:%S";
-    // dsm(t('Interval settings: @first, @interval, @final', array(
-    //   '@first' => strftime($format, $interval_settings['first']),
-    //   '@interval' => $interval_settings['interval'],
-    //   // '@final' => strftime($format, $interval_settings['final']),
-    // )));
-    // dsm(t('Eligibility period: @min to @max', array(
-    //   '@min' => strftime($format, $period['min']),
-    //   '@max' => strftime($format, $period['max']),
-    // )));
-
+  // calculate the max/min period timestamps using
+  // the number of intervals it takes to count up
+  // to the specified timestamp
+  $num_intervals = ($timestamp - $interval_settings['first']) / $interval_settings['interval'];
+  if ( ($timestamp - $interval_settings['first']) % $interval_settings['interval'] == 0) {
+    // if the interval size divides timestamp evenly,
+    // then timestamp falls right onto an interval min (the start of an interval)
+    $period['min'] = $interval_settings['first'] + $num_intervals * $interval_settings['interval'];
+    $period['max'] = $interval_settings['first'] + ($num_intervals + 1) * $interval_settings['interval'];
   }
   else {
-    // Array based calculation
-    $times = variable_get('userpoints_collect_dates_array', NULL);
-    if (is_null($times)) {
-      $times = userpoints_collect_dates_generate_array();
-      variable_set('userpoints_collect_dates_array', $times);
-    }
+    // if num_intervals isn't a whole number, timestamp falls
+    // in the middle of an interval.  ex. a number_intervals of 2.4
+    // rounds down to 2 intervals (min_intervals) and rounds up
+    // to 3 intervals (max_intervals)
+    $min_intervals = floor($num_intervals);
+    $max_intervals = ceil($num_intervals);
 
-    // TODO: remove after debug
-    // $format = "%H:%M:%S";
-    //     $all_times = "";
-    //     for ($i = 0; $i < count($times); $i++) {
-    //       $all_times .= strftime($format, $times[$i]) . " ";
-    //     }
-    // dsm(t($all_times));
+    $period['min'] = $interval_settings['first'] + $min_intervals * $interval_settings['interval'];
+    $period['max'] = $interval_settings['first'] + $max_intervals * $interval_settings['interval'];
+  }
 
-    // return false (no eligibility period) if the
-    // current time is before first/earliest eligibility period
-    // or the current time is past the final/latest eligibility period
-    if (time() < $times[0] || time() > $times[count($times) - 1]) {
-      return FALSE;
-    }
+  // TODO: remove after debug
+  // $format = "%H:%M:%S";
+  // dsm(t('Interval settings: @first, @interval, @final', array(
+  //   '@first' => strftime($format, $interval_settings['first']),
+  //   '@interval' => $interval_settings['interval'],
+  //   // '@final' => strftime($format, $interval_settings['final']),
+  // )));
+  // dsm(t('Eligibility period: @min to @max', array(
+  //   '@min' => strftime($format, $period['min']),
+  //   '@max' => strftime($format, $period['max']),
+  // )));
+}
 
-    $period = array();
-    $period['first'] = $times[0];
-    $period['final'] = $times[count($times) - 1];
+/**
+ * Returns eligibility information for series based time checking.
+ *
+ * @param $timestamp
+ *   A timestamp to check eligibility for.
+ * @return
+ *   A array containing min, max, first and final or FALSE.
+ */
+function userpoints_collect_eligibility_period_series($timestamp) {
+  // Array based calculation
+  $times = variable_get('userpoints_collect_dates_array', NULL);
+  if (is_null($times)) {
+    $times = userpoints_collect_dates_generate_array();
+    variable_set('userpoints_collect_dates_array', $times);
+  }
 
-    // sort the times in descending order before
-    // iterating over them
-    rsort($times, SORT_NUMERIC);
+  // TODO: remove after debug
+  // $format = "%H:%M:%S";
+  //     $all_times = "";
+  //     for ($i = 0; $i < count($times); $i++) {
+  //       $all_times .= strftime($format, $times[$i]) . " ";
+  //     }
+  // dsm(t($all_times));
 
-    // find the minimum/maximum time for the eligibility period
-    for ($i = 0; $i < count($times); $i++) {
-      // handle boundary cases
-      if ($times[$i] == $timestamp) {
-        // timestamp = final(latest) timestamp in array
-        if ($i == 0) {
-          $period['min'] = $period['final'];
-          $period['max'] = $times[1];
-        }
-        // timestamp = first(earliest) timestamp in array
-        elseif ($i == count($times) - 1) {
-          $period['min'] = count($times) - 2;
-          $period['max'] = $period['first'];
-        }
+  // return false (no eligibility period) if the
+  // current time is before first/earliest eligibility period
+  // or the current time is past the final/latest eligibility period
+  if (time() < $times[0] || time() > $times[count($times) - 1]) {
+    return FALSE;
+  }
+
+  $period = array();
+  $period['first'] = $times[0];
+  $period['final'] = $times[count($times) - 1];
+
+  // sort the times in descending order before
+  // iterating over them
+  rsort($times, SORT_NUMERIC);
+
+  // find the minimum/maximum time for the eligibility period
+  for ($i = 0; $i < count($times); $i++) {
+    // handle boundary cases
+    if ($times[$i] == $timestamp) {
+      // timestamp = final(latest) timestamp in array
+      if ($i == 0) {
+        $period['min'] = $period['final'];
+        $period['max'] = $times[1];
       }
-      else {
-        if ($times[$i] < $timestamp) {
-          $period['min'] = $times[$i];
-          $period['max'] = $times[$i - 1];
+      // timestamp = first(earliest) timestamp in array
+      elseif ($i == count($times) - 1) {
+        $period['min'] = count($times) - 2;
+        $period['max'] = $period['first'];
+      }
+    }
+    else {
+      if ($times[$i] < $timestamp) {
+        $period['min'] = $times[$i];
+        $period['max'] = $times[$i - 1];
 
-          // TODO: Remove after debug
-          // $format = "%H:%M:%S";
-          // dsm(t('Eligibility period: @min to @max', array(
-          //   '@min' => strftime($format, $period['min']),
-          //   '@max' => strftime($format, $period['max']),
-          //   )));
+        // TODO: Remove after debug
+        // $format = "%H:%M:%S";
+        // dsm(t('Eligibility period: @min to @max', array(
+        //   '@min' => strftime($format, $period['min']),
+        //   '@max' => strftime($format, $period['max']),
+        //   )));
 
-          break;
-        }
+        break;
       }
     }
   }
@@ -399,7 +425,7 @@ function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
  * a point, or false if there are no upcoming eligible times.
  */
 function userpoints_collect_next_eligible_time() {
-  $period = userpoints_collect_dates_get_eligibility_period();
+  $period = userpoints_collect_eligibility_period();
   // return the period max (upcoming time) only if that max
   // is not set to NULL (i.e. there IS a definite eligibility endpoint)
   // and if the max isn't the last eligible time
