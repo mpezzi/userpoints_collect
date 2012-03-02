@@ -15,7 +15,7 @@ function userpoints_collect_variable_info($options) {
     'type' => 'string',
     'title' => t('Submit Button label', array(), $options),
     'default' => $defaults['submit_label'],
-    'description' => t('Label to display on the userpoints_collect submit button', array(), $options),
+    'description' => t('Messaging to display on the userpoints_collect submit button', array(), $options),
     'required' => TRUE,
     'group' => 'userpoints_collect',
   );
@@ -31,7 +31,7 @@ function userpoints_collect_variable_info($options) {
     'type' => 'string',
     'title' => t('Return to Site URL', array(), $options),
     'default' => $defaults['return_url'],
-    'description' => t('URL to the site users should be redirected to if no ballots are are available.', array(), $options),
+    'description' => t('URL to the site users should be redirected to if no ballots are available.', array(), $options),
     'required' => TRUE,
     'group' => 'userpoints_collect',
   );
@@ -54,7 +54,7 @@ function userpoints_collect_variable_info($options) {
   $variables['userpoints_collect_after_collect_path'] = array(
     'type' => 'string',
     'title' => t('After collect path', array(), $options),
-    'description' => 'Redirect to this path after user collects a point',
+    'description' => 'Path to redirect user to after collecting a point',
     'default' => $defaults['after_collect_path'],
     'required' => TRUE,
     'group' => 'userpoints_collect',
