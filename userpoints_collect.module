@@ -534,7 +534,7 @@ function userpoints_collect_date_set_interval_settings($interval_length = 180, $
      t('Successfully generated @repeat intervals, @secs_apart @sec_pluralized apart.', array(
        '@repeat' => is_null($repeat) ? 'x' : $repeat,
        '@secs_apart' => $interval_length,
-       '@sec_pluralized' => format_plural($secs_apart, 'second', 'seconds')
+       '@sec_pluralized' => format_plural($interval_length, 'second', 'seconds')
        )
      )
    );
