@@ -102,9 +102,7 @@ function userpoints_collect_config($variable = NULL) {
 function userpoints_collect_form($form, &$form_state) {
   global $user;
 
-  $access = userpoints_collect_access();
-
-  if ( $access ) {
+  if ( userpoints_collect_access() ) {
     $form['submit'] = array(
       '#type' => 'submit',
       '#value' => userpoints_collect_config('submit_label'),
@@ -113,8 +111,6 @@ function userpoints_collect_form($form, &$form_state) {
   else {
     $timeleft = userpoints_collect_eligibility_timeleft();
 
-    $form['#disabled'] = TRUE;
-
     $form['link'] = array(
       '#prefix' => '<p>',
       '#suffix' => '</p>',
@@ -122,8 +118,12 @@ function userpoints_collect_form($form, &$form_state) {
     );
 
     $form['timeleft'] = array(
+      '#prefix' => '<p>',
+      '#suffix' => '</p>',
       '#markup' => $timeleft ? format_string(userpoints_collect_config('next_ballot_label'), array('@timeleft' => $timeleft)) : userpoints_collect_config('no_ballots_label'),
     );
+
+    $form['#disabled'] = TRUE;
   }
 
   return $form;
@@ -205,40 +205,37 @@ function userpoints_collect_eligibility($account = NULL) {
       ->fetchObject();
   }
 
-
   $last_txn = $last_txns[$account->uid];
-  if ($last_txn) {
+
+  if ( $last_txn ) {
     $last_timestamp = $last_txn->time_stamp;
   }
 
-  // get the eligibility period (min and max timestamp)
-  // that the current time would fall into
+  // Get the eligibility period (min and max timestamp) that the current time would fall into
   $period = userpoints_collect_dates_get_eligibility_period();
-  // if period returns false, it means there are no periods of eligibility
-  // (at least not yet)
-  if (!$period) {
-    return FALSE;
-  }
-  else {
+
+  // If period returns false, it means there are no periods of eligibility (at least not yet)
+  if ( $period ) {
     $eligibility_period_min = $period['min'];
     $eligibility_period_max = $period['max'];
   }
+  else {
+    return FALSE;
+  }
 
-  // check if valid timestamps were retrieved for min / max
-  // eligibility periods
+  // Check if valid timestamps were retrieved for min / max eligibility periods
   if ( isset($eligibility_period_min) && $eligibility_period_min > 0
     && isset($eligibility_period_max) && $eligibility_period_max > 0 ) {
 
-    if (!isset($last_timestamp)) {
-      // user has no point transactions on record
-      // check current time if it is within eligibility period
+    // User has no point transactions on record check current time if it is within eligibility period.
+    if ( !isset($last_timestamp) ) {
       return $eligibility_period_min < time() && $eligibility_period_max > time();
     }
+    // The user has point transaction(s) on record
     else {
-      // the user has point transaction(s) on record
+      // User's last point claimed is within the eligibility period
       if ( $last_timestamp > $eligibility_period_min
         && $last_timestamp < $eligibility_period_max ) {
-        // user's last point claimed is within the eligibility period
         return FALSE;
       }
       else {
@@ -247,12 +244,8 @@ function userpoints_collect_eligibility($account = NULL) {
       }
     }
   }
-  else {
-    // No eligible dates were found in the database
-    return FALSE;
-  }
 
-  // Something went wrong.
+  // No eligible dates were found in the database
   return FALSE;
 }
 
