@@ -1,14 +1,15 @@
 <?php
-/**
-* @file
-* Install userpoints collect eligiblity dates module
-*/
 
 /**
-* Implements hook_schema().
-*/
+ * @file
+ * Install userpoints collect eligiblity dates module
+ */
+
+
+/**
+ * Implements hook_schema().
+ */
 function userpoints_collect_schema() {
-  $schema = array();
   $schema['userpoints_collect_dates'] = array(
     'description' => 'Holds Userpoints Collect eligibility dates',
     'fields' => array(
@@ -16,15 +17,16 @@ function userpoints_collect_schema() {
         'description' => 'Eligible Date ID',
         'type' => 'serial',
         'not null' => TRUE,
-        ),
+      ),
       'timestamp' => array(
         'description' => 'timestamp',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
-        ),
       ),
+    ),
     'primary key' => array('id'),
   );
+
   return $schema;
 }

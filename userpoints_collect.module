@@ -5,6 +5,7 @@
  * Provides a block for users to collect points within time constraints.
  */
 
+
 define('USERPOINTS_COLLECT_MODE_ARRAY', 1);
 define('USERPOINTS_COLLECT_MODE_INTERVAL', 2);
 
@@ -14,7 +15,7 @@ define('USERPOINTS_COLLECT_MODE_INTERVAL', 2);
 function userpoints_collect_permission() {
   return array(
     'use userpoints collect' => array(
-      'title' => t('use userpoints collect'),
+      'title' => t('Use Userpoints Collect'),
       'description' => t('Allows users to use the userpoints collect block.'),
     ),
   );
@@ -63,7 +64,6 @@ function userpoints_collect_block_info() {
   );
 }
 
-
 /**
  * Implements hook_block_view().
  */
@@ -104,7 +104,6 @@ function userpoints_collect_form_defaults() {
     'after_collect_path' => '<front>',
   );
 }
-
 
 /**
  * Returns a Userpoints collect form.
