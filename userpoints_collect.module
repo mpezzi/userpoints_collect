@@ -532,14 +532,11 @@ function userpoints_collect_date_set_interval_settings($interval_length = 180, $
   // check if repeat is set to be indefinite
   is_null($repeat) ? $interval_settings['final'] = NULL : $interval_settings['final'] = $interval_settings['first'] + $interval_length * $repeat;
   variable_set('userpoints_collect_dates_interval', $interval_settings);
-  drupal_set_message(
-     t('Successfully generated @repeat intervals, @secs_apart @sec_pluralized apart.', array(
-       '@repeat' => is_null($repeat) ? 'x' : $repeat,
-       '@secs_apart' => $interval_length,
-       '@sec_pluralized' => format_plural($interval_length, 'second', 'seconds')
-       )
-     )
-   );
+  drupal_set_message(t('Successfully generated @repeat intervals, @secs_apart @sec_pluralized apart.', array(
+    '@repeat' => is_null($repeat) ? 'x' : $repeat,
+    '@secs_apart' => $interval_length,
+    '@sec_pluralized' => format_plural($interval_length, 'second', 'seconds'),
+  )));
 }
 
 /**
@@ -591,16 +588,13 @@ function userpoints_collect_generate_series($random_dist = FALSE, $shuffle = FAL
     shuffle($dates);
   }
 
-  drupal_set_message(
-    t('Successfully generated an array of @number_of_timestamps @random_dist dates, @minutes_apart @min_pluralized apart@shuffled', array(
-      '@random_dist' => $random_dist == TRUE ? 'randomly distributed' : 'evenly distributed',
-      '@number_of_timestamps' => $number_of_timestamps,
-      '@minutes_apart' => $random_dist == TRUE ? 'x' : $minutes_apart,
-      '@min_pluralized' => $random_dist == TRUE ? "minutes" : format_plural($minutes_apart, 'minute', 'minutes'),
-      '@shuffled' => $shuffle == TRUE ? ', and then shuffled them.' : '.',
-      )
-    )
-  );
+  drupal_set_message(t('Successfully generated an array of @number_of_timestamps @random_dist dates, @minutes_apart @min_pluralized apart@shuffled', array(
+    '@random_dist' => $random_dist == TRUE ? 'randomly distributed' : 'evenly distributed',
+    '@number_of_timestamps' => $number_of_timestamps,
+    '@minutes_apart' => $random_dist == TRUE ? 'x' : $minutes_apart,
+    '@min_pluralized' => $random_dist == TRUE ? "minutes" : format_plural($minutes_apart, 'minute', 'minutes'),
+    '@shuffled' => $shuffle == TRUE ? ', and then shuffled them.' : '.',
+  )));
   return $dates;
 }
 
