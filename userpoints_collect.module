@@ -258,7 +258,7 @@ function userpoints_collect_eligibility($account = NULL) {
  *    will default to current time if not specified
  */
 function userpoints_collect_dates_get_eligibility_period($timestamp = NULL) {
-  if (is_null($timestamp)) {
+  if ( is_null($timestamp) ) {
     $timestamp = time();
   }
 
