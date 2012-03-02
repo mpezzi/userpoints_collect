@@ -564,7 +564,8 @@ function userpoints_collect_clear_series() {
 }
 
 /**
- * Generates an array of ordered or shuffled timestamps
+ * Generates an array of ordered or shuffled timestamps with
+ * the first timestamp starting 10 seconds from now
  *
  * @param $random_dist
  *    randomizes the distribution (time between dates)
@@ -578,11 +579,12 @@ function userpoints_collect_clear_series() {
  */
 function userpoints_collect_generate_series($random_dist = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
   $dates = array();
-  // array_push($dates, time() + 10);
+  $start = time() + 10;
+  array_push($dates, $start);
   for ( $i = 1; $i <= $number_of_timestamps; $i++ ) {
     // if random_dist is true, a multiplier (from 1-5) will be factored into each date
     $random_dist == TRUE ? $multiplier = rand(1, 5) : $multiplier = 1;
-    array_push( $dates, time() + ($i * $minutes_apart * $multiplier * 60) );
+    array_push( $dates, $start + ($i * $minutes_apart * $multiplier * 60) );
   }
 
   if ($shuffle == TRUE) {
@@ -603,7 +605,8 @@ function userpoints_collect_generate_series($random_dist = FALSE, $shuffle = FAL
 }
 
 /**
- * Generates and saves a series of timestamps to Drupal's variables table
+  * Generates and saves an array of ordered or shuffled timestamps with
+  * the first timestamp starting 10 seconds from now.
  *
  * @param $random_dist
  *    randomizes the distribution (time between dates)
