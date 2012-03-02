@@ -76,33 +76,24 @@ function userpoints_collect_block_view($delta = '') {
 }
 
 /**
- * Returns an array containing the settings for the
- * userpoints_collect form itself
+ * Returns an array containing configuration settings.
+ *
+ * @param $variable
+ *   A string representing a configuration variable.
+ * @return
+ *   A saved config variable or an array of all variables.
  */
-function userpoints_collect_form_config() {
-  $defaults = userpoints_collect_form_defaults();
-  return array(
-    'submit_label' => variable_get('userpoints_collect_submit_label', $defaults['submit_label']),
-    'return_label' => variable_get('userpoints_collect_return_label', $defaults['return_label']),
-    'return_url' => variable_get('userpoints_collect_return_url', $defaults['return_url']),
-    'no_ballots_label' => variable_get('userpoints_collect_no_ballots_label', $defaults['no_ballots_label']),
-    'next_ballot_label' => variable_get('userpoints_collect_next_ballot_label', $defaults['next_ballot_label']),
-    'after_collect_path' => variable_get('userpoints_collect_after_collect_path', $defaults['after_collect_path']),
+function userpoints_collect_config($variable = NULL) {
+  $config = array(
+    'submit_label' => variable_get('userpoints_collect_submit_label', 'Collect now!'),
+    'return_label' => variable_get('userpoints_collect_return_label', 'Back to Facebook'),
+    'return_url' => variable_get('userpoints_collect_return_url', 'http://facebook.com'),
+    'no_ballots_label' => variable_get('userpoints_collect_no_ballots_label', 'No more ballots remaining'),
+    'next_ballot_label' => variable_get('userpoints_collect_next_ballot_label', 'Next ballot available in @timeleft'),
+    'after_collect_path' => variable_get('userpoints_collect_after_collect_path', '<front>'),
   );
-}
 
-/**
- * Returns an array of defaults for userpoints_collect config form
- */
-function userpoints_collect_form_defaults() {
-  return array(
-    'submit_label' => 'Collect now!',
-    'return_label' => 'Back to Facebook',
-    'return_url' => 'http://facebook.com',
-    'no_ballots_label' => 'No more ballots remaining',
-    'next_ballot_label' => 'Next ballot available in @timeleft',
-    'after_collect_path' => '<front>',
-  );
+  return isset($config[$variable]) ? $config[$variable] : $config;
 }
 
 /**
@@ -110,31 +101,28 @@ function userpoints_collect_form_defaults() {
  */
 function userpoints_collect_form($form, &$form_state) {
   global $user;
-  $access = userpoints_collect_access();
 
-  // retrieve the variables used to configure this collect form
-  $config = userpoints_collect_form_config();
+  $access = userpoints_collect_access();
 
   if ( $access ) {
     $form['submit'] = array(
-      //'#disabled' => !$access,
       '#type' => 'submit',
-      '#value' => t($config['submit_label']),
+      '#value' => userpoints_collect_config('submit_label'),
     );
   }
   else {
+    $timeleft = userpoints_collect_eligibility_timeleft();
+
     $form['#disabled'] = TRUE;
+
     $form['link'] = array(
       '#prefix' => '<p>',
       '#suffix' => '</p>',
-      '#markup' => l($config['return_label'], $config['return_url'], array('attributes' => array('class' => array('btn', 'btn-large', 'btn-primary')))),
+      '#markup' => l(userpoints_collect_config('return_label'), userpoints_collect_config('return_url'), array('attributes' => array('class' => array('btn', 'btn-large', 'btn-primary')))),
     );
 
-    $timeleft = userpoints_collect_eligibility_timeleft();
-    $ballot_message = !$timeleft ? $config['no_ballots_label'] : format_string($config['next_ballot_label'], array('@timeleft' => $timeleft));
-
     $form['timeleft'] = array(
-      '#markup' => $ballot_message,
+      '#markup' => $timeleft ? format_string(userpoints_collect_config('next_ballot_label'), array('@timeleft' => $timeleft)) : userpoints_collect_config('no_ballots_label'),
     );
   }
 
@@ -159,9 +147,7 @@ function userpoints_collect_form_submit($form, &$form_state) {
     'points' => 1,
   ));
 
-  $config = variable_get('userpoints_collect_form_config', userpoints_collect_form_defaults());
-
-  $form_state['redirect'] = $config['after_collect_path'];
+  $form_state['redirect'] = userpoints_collect_config('after_collect_path');
 }
 
 /**
