@@ -15,8 +15,8 @@ define('USERPOINTS_COLLECT_MODE_INTERVAL', 2);
 function userpoints_collect_permission() {
   return array(
     'use userpoints collect' => array(
-      'title' => t('Use Userpoints Collect'),
-      'description' => t('Allows users to use the userpoints collect block.'),
+      'title' => t('Use userpoints collect'),
+      'description' => t('Allows users to use userpoints collect.'),
     ),
   );
 }
