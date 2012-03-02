@@ -529,14 +529,6 @@ function userpoints_collect_date_load_default_interval_settings() {
 }
 
 /**
- * Convenience function to clear all point transactions
- */
-function userpoints_collect_clear_all_points() {
-  db_truncate('userpoints_txn')->execute();
-  drupal_set_message(t('Cleared all point transactions'));
-}
-
-/**
  * Clears out userpoints_collect timestamp timestamps set in variables table
  */
 function userpoints_collect_dates_clear_array() {
