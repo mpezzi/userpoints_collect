@@ -605,7 +605,7 @@ function userpoints_collect_generate_series($random_dist = FALSE, $shuffle = FAL
  * Saves a series of timestamps to Drupal's variables table
  */
 function userpoints_collect_generate_and_save_series($randomized = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
-  userpoints_collect_dates_clear_array();
+  userpoints_collect_clear_series();
   $dates = userpoints_collect_generate_series($randomized, $shuffle, $number_of_timestamps, $minutes_apart);
   variable_set('userpoints_collect_series', $dates);
 }
