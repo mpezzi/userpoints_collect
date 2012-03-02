@@ -344,6 +344,8 @@ function userpoints_collect_eligibility_period_interval($timestamp) {
   //   '@min' => strftime($format, $period['min']),
   //   '@max' => strftime($format, $period['max']),
   // )));
+
+  return $period;
 }
 
 /**
