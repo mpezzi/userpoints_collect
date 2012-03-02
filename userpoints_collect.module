@@ -358,10 +358,10 @@ function userpoints_collect_eligibility_period_interval($timestamp) {
  */
 function userpoints_collect_eligibility_period_series($timestamp) {
   // Array based calculation
-  $times = variable_get('userpoints_collect_dates_array', NULL);
+  $times = variable_get('userpoints_collect_series', NULL);
   if (is_null($times)) {
     $times = userpoints_collect_generate_series();
-    variable_set('userpoints_collect_dates_array', $times);
+    variable_set('userpoints_collect_series', $times);
   }
 
   // TODO: remove after debug
@@ -559,8 +559,8 @@ function userpoints_collect_date_load_default_interval_settings() {
 /**
  * Clears out userpoints_collect timestamp timestamps set in variables table
  */
-function userpoints_collect_dates_clear_array() {
-  variable_del('userpoints_collect_dates_array');
+function userpoints_collect_clear_series() {
+  variable_del('userpoints_collect_series');
 }
 
 /**
@@ -607,5 +607,5 @@ function userpoints_collect_generate_series($random_dist = FALSE, $shuffle = FAL
 function userpoints_collect_generate_and_save_series($randomized = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
   userpoints_collect_dates_clear_array();
   $dates = userpoints_collect_generate_series($randomized, $shuffle, $number_of_timestamps, $minutes_apart);
-  variable_set('userpoints_collect_dates_array', $dates);
+  variable_set('userpoints_collect_series', $dates);
 }
