@@ -568,6 +568,7 @@ function userpoints_collect_clear_series() {
  *
  * @param $random_dist
  *    randomizes the distribution (time between dates)
+ *    if set, this overrides any setting for $minutes_apart
  * @param $shuffle
  *    shuffles the elements of the array
  * @param $number_of_timestamps
@@ -606,6 +607,7 @@ function userpoints_collect_generate_series($random_dist = FALSE, $shuffle = FAL
  *
  * @param $random_dist
  *    randomizes the distribution (time between dates)
+ *    if set, this overrides any setting for $minutes_apart
  * @param $shuffle
  *    shuffles the elements of the array
  * @param $number_of_timestamps
