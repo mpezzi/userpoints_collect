@@ -184,70 +184,34 @@ function userpoints_collect_access($account = NULL) {
  * Returns whether a user is eligible to collect a point.
  *
  * @param $account
- *   A user object.
+ *   (optional) The account to check, if not given use the currently logged in user.
  * @return
  *   Boolean TRUE if the account is eligible.
  */
 function userpoints_collect_eligibility($account = NULL) {
-  $last_txns = drupal_static(__FUNCTION__, array());
-
-  if ( !isset($account) ) {
-    global $user;
-    $account = $user;
+  if ( is_null($account) ) {
+    $account = $GLOBALS['user'];
   }
 
   // Load the last transaction by user.
-  if ( !isset($last_txns[$account->uid]) ) {
-    $last_txns[$account->uid] = db_select('userpoints_txn', 'u')
-      ->fields('u')
-      ->condition('uid', $account->uid)
-      ->orderBy('time_stamp', 'DESC')
-      ->range(0, 1)
-      ->execute()
-      ->fetchObject();
-  }
-
-  $last_txn = $last_txns[$account->uid];
-
-  if ( $last_txn ) {
-    $last_timestamp = $last_txn->time_stamp;
-  }
+  $txn = userpoints_collect_last_txn($account);
+  $timestamp = time();
+  $timestamp_last_txn = isset($txn->time_stamp) ? $txn->time_stamp : FALSE;
+  $mode = userpoints_collect_config('mode');
 
   // Get the eligibility period (min and max timestamp) that the current time would fall into
-  $period = userpoints_collect_eligibility_period();
-
-  // If period returns false, it means there are no periods of eligibility (at least not yet)
-  if ( $period ) {
-    $eligibility_period_min = $period['min'];
-    $eligibility_period_max = $period['max'];
-  }
-  else {
-    return FALSE;
-  }
-
-  // Check if valid timestamps were retrieved for min / max eligibility periods
-  if ( isset($eligibility_period_min) && $eligibility_period_min > 0
-    && isset($eligibility_period_max) && $eligibility_period_max > 0 ) {
-
-    // User has no point transactions on record check current time if it is within eligibility period.
-    if ( !isset($last_timestamp) ) {
-      return $eligibility_period_min < time() && $eligibility_period_max > time();
-    }
-    // The user has point transaction(s) on record
-    else {
-      // User's last point claimed is within the eligibility period
-      if ( $last_timestamp > $eligibility_period_min
-        && $last_timestamp < $eligibility_period_max ) {
-        return FALSE;
+  if ( $period = userpoints_collect_eligibility_period($timestamp, $mode) ) {
+    if ( $period['min'] > 0 && $period['max'] > 0 ) {
+      if ( $timestamp_last_txn ) {
+        return $timestamp_last_txn < $period['min'] && $timestamp_last_txn > $period['max'];
       }
       else {
-        // drupal_set_message( t('Next eligibility period from @min to @max', array('@min' => $eligibility_period_min,'@max' => $eligibility_period_max,)) );
-        return TRUE;
+        return $period['min'] < $timestamp && $period['max'] > $timestamp;
       }
     }
   }
 
-  // No eligible dates were found in the database
+  // No eligible dates were found.
   return FALSE;
 }
 
@@ -255,16 +219,20 @@ function userpoints_collect_eligibility($account = NULL) {
  * Returns eligibility information for a timestamp.
  *
  * @param $timestamp
- *   A timestamp to check eligibility for.
+ *   (optional) A timestamp to check eligibility for, if no timestamp is given use current time.
  * @return
  *   A array containing min, max, first and final or FALSE.
  */
-function userpoints_collect_eligibility_period($timestamp = NULL) {
+function userpoints_collect_eligibility_period($timestamp = NULL, $mode = NULL) {
   if ( is_null($timestamp) ) {
     $timestamp = time();
   }
 
-  switch ( userpoints_collect_config('mode') ) {
+  if ( is_null($mode) ) {
+    $mode = userpoints_collect_config('mode');
+  }
+
+  switch ( $mode ) {
     case USERPOINTS_COLLECT_MODE_INTERVAL:
       return userpoints_collect_eligibility_period_interval($timestamp);
     case USERPOINTS_COLLECT_MODE_SERIES:
@@ -421,6 +389,30 @@ function userpoints_collect_eligibility_period_series($timestamp) {
   }
 
   return $period;
+}
+
+/**
+ * Returns the last point transaction from an account.
+ *
+ * @param $account
+ *   A user object.
+ * @return
+ *   A point transaction object or FALSE.
+ */
+function userpoints_collect_last_txn($account) {
+  $txns = drupal_static(__FUNCTION__, array());
+
+  if ( !isset($txns[$account->uid]) ) {
+    $txns[$account->uid] = db_select('userpoints_txn', 'u')
+      ->fields('u')
+      ->condition('uid', $account->uid)
+      ->orderBy('time_stamp', 'DESC')
+      ->range(0, 1)
+      ->execute()
+      ->fetchObject();
+  }
+
+  return $txns[$account->uid];
 }
 
 /**
