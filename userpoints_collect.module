@@ -185,12 +185,16 @@ function userpoints_collect_eligibility($account = NULL, $tid = NULL) {
 
   // Load the last transaction by user.
   $txn = userpoints_collect_last_txn($account, $tid);
+
+  // Set appropriate times to check against.
   $timestamp = time();
   $timestamp_last_txn = isset($txn->time_stamp) ? $txn->time_stamp : FALSE;
+
+  // @TODO: choose appropriate mode.
   $mode = userpoints_collect_config('mode');
 
   // Get the eligibility period (min and max timestamp) that the current time would fall into
-  if ( $period = userpoints_collect_eligibility_period($timestamp, $mode) ) {
+  if ( $period = userpoints_collect_eligibility_period($mode, $timestamp, $tid) ) {
     if ( $period['min'] > 0 && $period['max'] > 0 ) {
       if ( $timestamp_last_txn ) {
         return $timestamp_last_txn < $period['min'] && $timestamp_last_txn > $period['max'];
@@ -208,25 +212,21 @@ function userpoints_collect_eligibility($account = NULL, $tid = NULL) {
 /**
  * Returns eligibility information for a timestamp.
  *
+ * @param $mode
+ *   A userpoints collect mode (USERPOINTS_COLLECT_MODE_SERIES or USERPOINTS_COLLECT_MODE_INTERVAL)
  * @param $timestamp
- *   (optional) A timestamp to check eligibility for, if no timestamp is given use current time.
+ *   A timestamp to check eligibility for, if no timestamp is given use current time.
+ * @param $tid
+ *   The Category ID or NULL.
  * @return
  *   A array containing min, max, first and final or FALSE.
  */
-function userpoints_collect_eligibility_period($timestamp = NULL, $mode = NULL) {
-  if ( is_null($timestamp) ) {
-    $timestamp = time();
-  }
-
-  if ( is_null($mode) ) {
-    $mode = userpoints_collect_config('mode');
-  }
-
+function userpoints_collect_eligibility_period($mode, $timestamp, $tid) {
   switch ( $mode ) {
     case USERPOINTS_COLLECT_MODE_INTERVAL:
-      return userpoints_collect_eligibility_period_interval($timestamp);
+      return userpoints_collect_eligibility_period_interval($timestamp, $tid);
     case USERPOINTS_COLLECT_MODE_SERIES:
-      return userpoints_collect_eligibility_period_series($timestamp);
+      return userpoints_collect_eligibility_period_series($timestamp, $tid);
   }
 
   return FALSE;
@@ -237,10 +237,12 @@ function userpoints_collect_eligibility_period($timestamp = NULL, $mode = NULL) 
  *
  * @param $timestamp
  *   A timestamp to check eligibility for.
+ * @param $tid
+ *   The Category ID.
  * @return
  *   A array containing min, max, first and final or FALSE.
  */
-function userpoints_collect_eligibility_period_interval($timestamp) {
+function userpoints_collect_eligibility_period_interval($timestamp, $tid) {
   // retrieve interval settings from variables table and do
   // an interval-based calculation for next eligibility period
   $interval_settings = variable_get('userpoints_collect_dates_interval', NULL);
@@ -312,10 +314,12 @@ function userpoints_collect_eligibility_period_interval($timestamp) {
  *
  * @param $timestamp
  *   A timestamp to check eligibility for.
+ * @param $tid
+ *   The Category ID.
  * @return
  *   A array containing min, max, first and final or FALSE.
  */
-function userpoints_collect_eligibility_period_series($timestamp) {
+function userpoints_collect_eligibility_period_series($timestamp, $tid) {
   // retrieve the series timestamp data from db
   $series = db_select('userpoints_collect_series', 's')
     ->fields('s')
