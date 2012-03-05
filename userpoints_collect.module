@@ -184,70 +184,34 @@ function userpoints_collect_access($account = NULL) {
  * Returns whether a user is eligible to collect a point.
  *
  * @param $account
- *   A user object.
+ *   (optional) The account to check, if not given use the currently logged in user.
  * @return
  *   Boolean TRUE if the account is eligible.
  */
 function userpoints_collect_eligibility($account = NULL) {
-  $last_txns = drupal_static(__FUNCTION__, array());
-
-  if ( !isset($account) ) {
-    global $user;
-    $account = $user;
+  if ( is_null($account) ) {
+    $account = $GLOBALS['user'];
   }
 
   // Load the last transaction by user.
-  if ( !isset($last_txns[$account->uid]) ) {
-    $last_txns[$account->uid] = db_select('userpoints_txn', 'u')
-      ->fields('u')
-      ->condition('uid', $account->uid)
-      ->orderBy('time_stamp', 'DESC')
-      ->range(0, 1)
-      ->execute()
-      ->fetchObject();
-  }
-
-  $last_txn = $last_txns[$account->uid];
-
-  if ( $last_txn ) {
-    $last_timestamp = $last_txn->time_stamp;
-  }
+  $txn = userpoints_collect_last_txn($account);
+  $timestamp = time();
+  $timestamp_last_txn = isset($txn->time_stamp) ? $txn->time_stamp : FALSE;
+  $mode = userpoints_collect_config('mode');
 
   // Get the eligibility period (min and max timestamp) that the current time would fall into
-  $period = userpoints_collect_eligibility_period();
-
-  // If period returns false, it means there are no periods of eligibility (at least not yet)
-  if ( $period ) {
-    $eligibility_period_min = $period['min'];
-    $eligibility_period_max = $period['max'];
-  }
-  else {
-    return FALSE;
-  }
-
-  // Check if valid timestamps were retrieved for min / max eligibility periods
-  if ( isset($eligibility_period_min) && $eligibility_period_min > 0
-    && isset($eligibility_period_max) && $eligibility_period_max > 0 ) {
-
-    // User has no point transactions on record check current time if it is within eligibility period.
-    if ( !isset($last_timestamp) ) {
-      return $eligibility_period_min < time() && $eligibility_period_max > time();
-    }
-    // The user has point transaction(s) on record
-    else {
-      // User's last point claimed is within the eligibility period
-      if ( $last_timestamp > $eligibility_period_min
-        && $last_timestamp < $eligibility_period_max ) {
-        return FALSE;
+  if ( $period = userpoints_collect_eligibility_period($timestamp, $mode) ) {
+    if ( $period['min'] > 0 && $period['max'] > 0 ) {
+      if ( $timestamp_last_txn ) {
+        return $timestamp_last_txn < $period['min'] && $timestamp_last_txn > $period['max'];
       }
       else {
-        // drupal_set_message( t('Next eligibility period from @min to @max', array('@min' => $eligibility_period_min,'@max' => $eligibility_period_max,)) );
-        return TRUE;
+        return $period['min'] < $timestamp && $period['max'] > $timestamp;
       }
     }
   }
 
-  // No eligible dates were found in the database
+  // No eligible dates were found.
   return FALSE;
 }
 
@@ -255,16 +219,20 @@ function userpoints_collect_eligibility($account = NULL) {
  * Returns eligibility information for a timestamp.
  *
  * @param $timestamp
- *   A timestamp to check eligibility for.
+ *   (optional) A timestamp to check eligibility for, if no timestamp is given use current time.
  * @return
  *   A array containing min, max, first and final or FALSE.
  */
-function userpoints_collect_eligibility_period($timestamp = NULL) {
+function userpoints_collect_eligibility_period($timestamp = NULL, $mode = NULL) {
   if ( is_null($timestamp) ) {
     $timestamp = time();
   }
 
-  switch ( userpoints_collect_config('mode') ) {
+  if ( is_null($mode) ) {
+    $mode = userpoints_collect_config('mode');
+  }
+
+  switch ( $mode ) {
     case USERPOINTS_COLLECT_MODE_INTERVAL:
       return userpoints_collect_eligibility_period_interval($timestamp);
     case USERPOINTS_COLLECT_MODE_SERIES:
@@ -358,69 +326,71 @@ function userpoints_collect_eligibility_period_interval($timestamp) {
  *   A array containing min, max, first and final or FALSE.
  */
 function userpoints_collect_eligibility_period_series($timestamp) {
-  // Array based calculation
-  $times = variable_get('userpoints_collect_series', NULL);
-  if (is_null($times)) {
-    $times = userpoints_collect_generate_series();
-    variable_set('userpoints_collect_series', $times);
-  }
+  // retrieve the series timestamp data from db
+  $series = db_select('userpoints_collect_series', 's')
+    ->fields('s')
+    ->orderBy('timestamp', 'DESC')
+    ->execute()
+    ->fetchAll();
 
-  // TODO: remove after debug
-  // $format = "%H:%M:%S";
-  //     $all_times = "";
-  //     for ($i = 0; $i < count($times); $i++) {
-  //       $all_times .= strftime($format, $times[$i]) . " ";
-  //     }
-  // dsm(t($all_times));
+  // Return the eligibility period only if the current time falls
+  // within an eligibility period recorded in the database.
+  $current = time();
+  if ( $current >= $series[count($series) - 1]->timestamp && $current <= $series[0]->timestamp ) {
+    $period = array();
+    $period['final'] = $series[0]->timestamp;
+    $period['first'] = $series[count($series) - 1]->timestamp;
 
-  // return false (no eligibility period) if the
-  // current time is before first/earliest eligibility period
-  // or the current time is past the final/latest eligibility period
-  if (time() < $times[0] || time() > $times[count($times) - 1]) {
-    return FALSE;
-  }
-
-  $period = array();
-  $period['first'] = $times[0];
-  $period['final'] = $times[count($times) - 1];
-
-  // sort the times in descending order before
-  // iterating over them
-  rsort($times, SORT_NUMERIC);
-
-  // find the minimum/maximum time for the eligibility period
-  for ($i = 0; $i < count($times); $i++) {
-    // handle boundary cases
-    if ($times[$i] == $timestamp) {
-      // timestamp = final(latest) timestamp in array
-      if ($i == 0) {
-        $period['min'] = $period['final'];
-        $period['max'] = $times[1];
+    // find the minimum/maximum time for the eligibility period
+    for ($i = 0; $i < count($series); $i++) {
+      // handle boundary cases
+      if ($series[$i]->timestamp == $timestamp) {
+        // timestamp = final(latest) timestamp in array
+        if ($i == 0) {
+          $period['min'] = $period['final'];
+          $period['max'] = $series[1]->timestamp;
+        }
+        // timestamp = first(earliest) timestamp in array
+        elseif ($i == count($series) - 1) {
+          $period['min'] = $series[count($series) - 2]->timestamp;
+          $period['max'] = $period['first'];
+        }
       }
-      // timestamp = first(earliest) timestamp in array
-      elseif ($i == count($times) - 1) {
-        $period['min'] = count($times) - 2;
-        $period['max'] = $period['first'];
+      else {
+        if ($series[$i]->timestamp < $timestamp) {
+          $period['min'] = $series[$i]->timestamp;
+          $period['max'] = $series[$i - 1]->timestamp;
+          break;
+        }
       }
     }
-    else {
-      if ($times[$i] < $timestamp) {
-        $period['min'] = $times[$i];
-        $period['max'] = $times[$i - 1];
+    return $period;
+  }
+  return FALSE;
+}
 
-        // TODO: Remove after debug
-        // $format = "%H:%M:%S";
-        // dsm(t('Eligibility period: @min to @max', array(
-        //   '@min' => strftime($format, $period['min']),
-        //   '@max' => strftime($format, $period['max']),
-        //   )));
+/**
+ * Returns the last point transaction from an account.
+ *
+ * @param $account
+ *   A user object.
+ * @return
+ *   A point transaction object or FALSE.
+ */
+function userpoints_collect_last_txn($account) {
+  $txns = drupal_static(__FUNCTION__, array());
 
-        break;
-      }
-    }
+  if ( !isset($txns[$account->uid]) ) {
+    $txns[$account->uid] = db_select('userpoints_txn', 'u')
+      ->fields('u')
+      ->condition('uid', $account->uid)
+      ->orderBy('time_stamp', 'DESC')
+      ->range(0, 1)
+      ->execute()
+      ->fetchObject();
   }
 
-  return $period;
+  return $txns[$account->uid];
 }
 
 /**
@@ -558,7 +528,9 @@ function userpoints_collect_date_load_default_interval_settings() {
  * Clears out userpoints_collect timestamp timestamps set in variables table
  */
 function userpoints_collect_clear_series() {
-  variable_del('userpoints_collect_series');
+  //variable_del('userpoints_collect_series');
+  db_truncate('userpoints_collect_series')
+  ->execute();
 }
 
 /**
@@ -576,27 +548,38 @@ function userpoints_collect_clear_series() {
  *    the number of minutes between each timestamp in the array
  */
 function userpoints_collect_generate_series($random_dist = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
-  $dates = array();
+  $series = array();
   $start = time() + 10;
-  array_push($dates, $start);
+
+  // create a timestamp object with timestamp 10 seconds from now
+  // and add to series array
+  $time = new stdClass();
+  $time->timestamp = $start;
+  $time->status = 1;
+  array_push($series, $time);
+
   for ( $i = 1; $i <= $number_of_timestamps; $i++ ) {
     // if random_dist is true, a multiplier (from 1-5) will be factored into each date
     $random_dist == TRUE ? $multiplier = rand(1, 5) : $multiplier = 1;
-    array_push( $dates, $start + ($i * $minutes_apart * $multiplier * 60) );
+    $time = new stdClass();
+    $time->timestamp = $start + ($i * $minutes_apart * $multiplier * 60);
+    $time->status = 1;
+    array_push($series, $time);
   }
 
   if ($shuffle == TRUE) {
-    shuffle($dates);
+    shuffle($series);
   }
 
-  drupal_set_message(t('Successfully generated an array of @number_of_timestamps @random_dist dates, @minutes_apart @min_pluralized apart@shuffled', array(
+  drupal_set_message(t('Successfully generated a series of @number_of_timestamps @random_dist timestamps, @minutes_apart @min_pluralized apart@shuffled', array(
     '@random_dist' => $random_dist == TRUE ? 'randomly distributed' : 'evenly distributed',
     '@number_of_timestamps' => $number_of_timestamps,
     '@minutes_apart' => $random_dist == TRUE ? 'x' : $minutes_apart,
     '@min_pluralized' => $random_dist == TRUE ? "minutes" : format_plural($minutes_apart, 'minute', 'minutes'),
     '@shuffled' => $shuffle == TRUE ? ', and then shuffled them.' : '.',
   )));
-  return $dates;
+
+  return $series;
 }
 
 /**
@@ -615,6 +598,10 @@ function userpoints_collect_generate_series($random_dist = FALSE, $shuffle = FAL
  */
 function userpoints_collect_generate_and_save_series($random_dist = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
   userpoints_collect_clear_series();
-  $dates = userpoints_collect_generate_series($random_dist, $shuffle, $number_of_timestamps, $minutes_apart);
-  variable_set('userpoints_collect_series', $dates);
+
+  // generate an array of timestamp objects (a series)
+  $series = userpoints_collect_generate_series($random_dist, $shuffle, $number_of_timestamps, $minutes_apart);
+  foreach($series as $timestamp) {
+    drupal_write_record('userpoints_collect_series', $timestamp);
+  }
 }

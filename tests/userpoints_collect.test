@@ -65,14 +65,16 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
   }
 
   /**
-   * Resets the interval its its default testing parameters and
+   * Resets the interval to its default testing parameters and
    * updates the test's $series_settings variable
    *
    */
   function reset_series() {
     $this->start = time() + 10;
-    userpoints_collect_generate_and_save_series(FALSE, FALSE, 5, 1/12);
-    $this->series_settings = variable_get('userpoints_collect_series', NULL);
+    $this->series_settings = userpoints_collect_generate_series(FALSE, FALSE, 5, 1/12);
+    foreach($this->series_settings as $ts) {
+      drupal_write_record('userpoints_collect_series', $ts);
+    }
   }
 
   /**
@@ -176,7 +178,7 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
     sleep(17);    // recall first timestamp starts 10 seconds after series was generated
 
     $period = userpoints_collect_eligibility_period();
-    $this->assertTrue($period['min'] == $this->series_settings[1], t('Series calculator returned correct min for the eligibility period'));
-    $this->assertTrue($period['max'] == $this->series_settings[2], t('Series calculator returned correct max for the eligibility period'));
+    $this->assertTrue($period['min'] == $this->series_settings[1]->timestamp, t('Series calculator returned correct min for the eligibility period'));
+    $this->assertTrue($period['max'] == $this->series_settings[2]->timestamp, t('Series calculator returned correct max for the eligibility period'));
   }
 }
