@@ -1,0 +1,84 @@
+<?php
+
+/**
+ * @file
+ * Test for userpoints collect services integration.
+ */
+
+// Avoid issues when the ServicesWebTestCase does not exist.
+if ( !class_exists('ServicesWebTestCase') ) {
+  return;
+}
+
+class UserpointsCollectServiceTestCase extends ServicesWebTestCase {
+  /**
+   * Class variables.
+   */
+  protected $privilegedUser = NULL;
+
+  /**
+   * Endpoint details.
+   */
+  protected $endpoint = NULL;
+
+  /**
+   * Implements getInfo().
+   */
+  public static function getInfo() {
+    return array(
+      'name' => t('Userpoints Collect Services integration'),
+      'description' => t('Tests the services resource userpoints collect and actions'),
+      'group' => t('Userpoints Collect'),
+    );
+  }
+
+  /**
+   * Implements setUp().
+   */
+  public function setUp() {
+    parent::setUp(array('ctools', 'services', 'rest_server', 'userpoints', 'userpoints_collect', 'userpoints_collect_service'));
+
+    // Set up endpoint.
+    $this->endpoint = $this->saveNewEndpoint();
+
+    // Extend endpoint with userpoints resources.
+    $this->endpoint->resources += array(
+      'userpoints' => array(
+        'alias' => '',
+        'operations' => array(),
+        'actions' => array(
+          'eligibility' => array(
+            'enabled' => 1,
+          ),
+          'add' => array(
+            'enabled' => 1,
+          ),
+        ),
+      ),
+    );
+
+    services_endpoint_save($this->endpoint);
+
+    // Create and login the privileged user.
+    $this->privilegedUser = $this->drupalCreateUser(array('use userpoints collect'));
+    $this->drupalLogin($this->privilegedUser);
+  }
+
+  /**
+   * Tests for checking eligibility.
+   */
+  public function testUserpointsCollectEligibility() {
+    userpoints_collect_generate_and_save_series();
+
+    // Check that user is able to collect a point.
+    $result = $this->servicesPost($this->endpoint->path . '/userpoints_collect/eligibility');
+    $this->assertTrue($result['body'] == 'true', t('Account eligibility check #1 passed'));
+  }
+
+  /**
+   * Tests for collecting points.
+   */
+  public function testUserpointsCollectAdd() {
+
+  }
+}
