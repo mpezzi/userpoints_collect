@@ -20,6 +20,12 @@ function userpoints_collect_admin_settings($form, &$form_state) {
       USERPOINTS_COLLECT_MODE_INTERVAL => t('Interval'),
     ),
   );
+  $form['userpoints_collect_points'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Number of points to collect'),
+    '#required' => TRUE,
+    '#default_value' => userpoints_collect_config('points'),
+  );
   $form['userpoints_collect_submit_label'] = array(
     '#type' => 'textfield',
     '#title' => t('Submit Button label'),
