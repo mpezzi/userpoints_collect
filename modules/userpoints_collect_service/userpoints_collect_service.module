@@ -12,78 +12,47 @@
 function userpoints_collect_service_services_resources() {
   return array(
     'userpoints_collect' => array(
-      'eligible' => array(
-        'help' => 'Determine the eligibility to collect userpoints.',
-        'file' => array('file' => 'inc', 'module' => 'userpoints_collect_service'),
-        'callback' => 'userpoints_collect_service_eligible',
-        'access callback' => 'userpoints_collect_service_access',
-        'access arguments' => array('eligible'),
+      'retrieve' => array(
+        'help' => 'Retrieve points',
+        'file' => array('file' => 'inc', 'module' => 'userpoints_collect_service', 'name' => 'resources/userpoints_collect_resource'),
+        'callback' => '_userpoints_collect_resource_retrieve',
+        'access callback' => '_userpoints_collect_resource_access',
+        'access arguments' => array('retrieve'),
         'access arguments append' => TRUE,
         'args' => array(
           array(
             'name' => 'uid',
+            'description' => 'The User ID.',
             'type' => 'int',
-            'description' => 'The User ID for which the points should be loaded. Defaults to the current logged in user.',
             'source' => array('path' => 0),
           ),
         ),
       ),
-      'add' => array(
-        'help' => 'Add points to a user if eligible.',
-        'file' => array('file' => 'inc', 'module' => 'userpoints_collect_service'),
-        'callback' => 'userpoints_collect_service_collect',
-        'access callback' => 'userpoints_collect_service_access',
-        'access arguments' => array('add'),
-        'access arguments append' => TRUE,
-        'args' => array(
-          array(
-            'name' => 'uid',
-            'type' => 'int',
-            'optional' => FALSE,
-            'description' => 'A valid Drupal User ID.',
-            'source' => array('data' => 'uid'),
-          ),
-          array(
-            'name' => 'points',
-            'type' => 'int',
-            'optional' => FALSE,
-            'source' => array('data' => 'points'),
-            'description' => 'Number of points to add/subtract.',
-          ),
-          array(
-            'name' => 'tid',
-            'type' => 'int',
-            'optional' => TRUE,
-            'source' => array('data' => 'tid'),
-            'description' => t('An optional Term ID for the category.'),
-          ),
-          array(
-            'name' => 'operation',
-            'type' => 'string',
-            'optional' => TRUE,
-            'source' => array('data' => 'operation'),
-            'description' => t('An operation string for this transaction.'),
-          ),
-          array(
-            'name' => 'description',
-            'type' => 'string',
-            'optional' => TRUE,
-            'source' => array('data' => 'description'),
-            'description' => t('An optional description of this transaction.'),
-          ),
-          array(
-            'name' => 'entity_type',
-            'type' => 'string',
-            'optional' => TRUE,
-            'source' => array('data' => 'entity_type'),
-            'description' => t('An optional description of this transaction.'),
-          ),
-          array(
-            'name' => 'entity_id',
-            'type' => 'int',
-            'optional' => TRUE,
-            'source' => array('data' => 'entity_id'),
-            'description' => t('An optional description of this transaction.'),
+      'actions' => array(
+        'eligibility' => array(
+          'help' => 'Check the eligibility of an account to collect a point.',
+          'file' => array('file' => 'inc', 'module' => 'userpoints_collect_service', 'name' => 'resources/userpoints_collect_resource'),
+          'callback' => '_userpoints_collect_resource_eligibility',
+          'access callback' => '_userpoints_collect_resource_access',
+          'access arguments' => array('eligibility'),
+          'access arguments append' => TRUE,
+          'args' => array(),
+        ),
+        'add' => array(
+          'help' => 'Add points to account if eligible.',
+          'file' => array('file' => 'inc', 'module' => 'userpoints_collect_service', 'name' => 'resources/userpoints_collect_resource'),
+          'callback' => '_userpoints_collect_resource_add',
+          'access callback' => '_userpoints_collect_resource_access',
+          'access arguments' => array('add'),
+          'access arguments append' => TRUE,
+          'args' => array(
+            array(
+              'name' => 'data',
+              'description' => 'A userpoints object.',
+              'type' => 'array',
+              'optional' => TRUE,
+              'source' => 'data',
+            ),
           ),
         ),
       ),
