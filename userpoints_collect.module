@@ -357,69 +357,47 @@ function userpoints_collect_eligibility_period_interval($timestamp) {
  *   A array containing min, max, first and final or FALSE.
  */
 function userpoints_collect_eligibility_period_series($timestamp) {
-  // Array based calculation
-  $times = variable_get('userpoints_collect_series', NULL);
-  if (is_null($times)) {
-    $times = userpoints_collect_generate_series();
-    variable_set('userpoints_collect_series', $times);
-  }
+  // retrieve the series timestamp data from db
+  $series = db_select('userpoints_collect_series', 's')
+    ->fields('s')
+    ->orderBy('timestamp', 'DESC')
+    ->execute()
+    ->fetchAll();
 
-  // TODO: remove after debug
-  // $format = "%H:%M:%S";
-  //     $all_times = "";
-  //     for ($i = 0; $i < count($times); $i++) {
-  //       $all_times .= strftime($format, $times[$i]) . " ";
-  //     }
-  // dsm(t($all_times));
+  // Return the eligibility period only if the current time falls
+  // within an eligibility period recorded in the database.
+  $current = time();
+  if ( $current >= $series[count($series) - 1]->timestamp && $current <= $series[0]->timestamp ) {
+    $period = array();
+    $period['final'] = $series[0]->timestamp;
+    $period['first'] = $series[count($series) - 1]->timestamp;
 
-  // return false (no eligibility period) if the
-  // current time is before first/earliest eligibility period
-  // or the current time is past the final/latest eligibility period
-  if (time() < $times[0] || time() > $times[count($times) - 1]) {
-    return FALSE;
-  }
-
-  $period = array();
-  $period['first'] = $times[0];
-  $period['final'] = $times[count($times) - 1];
-
-  // sort the times in descending order before
-  // iterating over them
-  rsort($times, SORT_NUMERIC);
-
-  // find the minimum/maximum time for the eligibility period
-  for ($i = 0; $i < count($times); $i++) {
-    // handle boundary cases
-    if ($times[$i] == $timestamp) {
-      // timestamp = final(latest) timestamp in array
-      if ($i == 0) {
-        $period['min'] = $period['final'];
-        $period['max'] = $times[1];
+    // find the minimum/maximum time for the eligibility period
+    for ($i = 0; $i < count($series); $i++) {
+      // handle boundary cases
+      if ($series[$i]->timestamp == $timestamp) {
+        // timestamp = final(latest) timestamp in array
+        if ($i == 0) {
+          $period['min'] = $period['final'];
+          $period['max'] = $series[1]->timestamp;
+        }
+        // timestamp = first(earliest) timestamp in array
+        elseif ($i == count($series) - 1) {
+          $period['min'] = $series[count($series) - 2]->timestamp;
+          $period['max'] = $period['first'];
+        }
       }
-      // timestamp = first(earliest) timestamp in array
-      elseif ($i == count($times) - 1) {
-        $period['min'] = count($times) - 2;
-        $period['max'] = $period['first'];
+      else {
+        if ($series[$i]->timestamp < $timestamp) {
+          $period['min'] = $series[$i]->timestamp;
+          $period['max'] = $series[$i - 1]->timestamp;
+          break;
+        }
       }
     }
-    else {
-      if ($times[$i] < $timestamp) {
-        $period['min'] = $times[$i];
-        $period['max'] = $times[$i - 1];
-
-        // TODO: Remove after debug
-        // $format = "%H:%M:%S";
-        // dsm(t('Eligibility period: @min to @max', array(
-        //   '@min' => strftime($format, $period['min']),
-        //   '@max' => strftime($format, $period['max']),
-        //   )));
-
-        break;
-      }
-    }
+    return $period;
   }
-
-  return $period;
+  return FALSE;
 }
 
 /**
@@ -557,7 +535,9 @@ function userpoints_collect_date_load_default_interval_settings() {
  * Clears out userpoints_collect timestamp timestamps set in variables table
  */
 function userpoints_collect_clear_series() {
-  variable_del('userpoints_collect_series');
+  //variable_del('userpoints_collect_series');
+  db_truncate('userpoints_collect_series')
+  ->execute();
 }
 
 /**
@@ -575,27 +555,38 @@ function userpoints_collect_clear_series() {
  *    the number of minutes between each timestamp in the array
  */
 function userpoints_collect_generate_series($random_dist = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
-  $dates = array();
+  $series = array();
   $start = time() + 10;
-  array_push($dates, $start);
+
+  // create a timestamp object with timestamp 10 seconds from now
+  // and add to series array
+  $time = new stdClass();
+  $time->timestamp = $start;
+  $time->status = 1;
+  array_push($series, $time);
+
   for ( $i = 1; $i <= $number_of_timestamps; $i++ ) {
     // if random_dist is true, a multiplier (from 1-5) will be factored into each date
     $random_dist == TRUE ? $multiplier = rand(1, 5) : $multiplier = 1;
-    array_push( $dates, $start + ($i * $minutes_apart * $multiplier * 60) );
+    $time = new stdClass();
+    $time->timestamp = $start + ($i * $minutes_apart * $multiplier * 60);
+    $time->status = 1;
+    array_push($series, $time);
   }
 
   if ($shuffle == TRUE) {
-    shuffle($dates);
+    shuffle($series);
   }
 
-  drupal_set_message(t('Successfully generated an array of @number_of_timestamps @random_dist dates, @minutes_apart @min_pluralized apart@shuffled', array(
+  drupal_set_message(t('Successfully generated a series of @number_of_timestamps @random_dist timestamps, @minutes_apart @min_pluralized apart@shuffled', array(
     '@random_dist' => $random_dist == TRUE ? 'randomly distributed' : 'evenly distributed',
     '@number_of_timestamps' => $number_of_timestamps,
     '@minutes_apart' => $random_dist == TRUE ? 'x' : $minutes_apart,
     '@min_pluralized' => $random_dist == TRUE ? "minutes" : format_plural($minutes_apart, 'minute', 'minutes'),
     '@shuffled' => $shuffle == TRUE ? ', and then shuffled them.' : '.',
   )));
-  return $dates;
+
+  return $series;
 }
 
 /**
@@ -614,6 +605,10 @@ function userpoints_collect_generate_series($random_dist = FALSE, $shuffle = FAL
  */
 function userpoints_collect_generate_and_save_series($random_dist = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
   userpoints_collect_clear_series();
-  $dates = userpoints_collect_generate_series($random_dist, $shuffle, $number_of_timestamps, $minutes_apart);
-  variable_set('userpoints_collect_series', $dates);
+
+  // generate an array of timestamp objects (a series)
+  $series = userpoints_collect_generate_series($random_dist, $shuffle, $number_of_timestamps, $minutes_apart);
+  foreach($series as $timestamp) {
+    drupal_write_record('userpoints_collect_series', $timestamp);
+  }
 }
