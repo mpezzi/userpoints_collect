@@ -1,0 +1,63 @@
+<?php
+
+/**
+ * @file
+ * Install / Uninstall userpoints_collect Schema.
+ */
+
+
+/**
+ * Implements hook_schema().
+ */
+function userpoints_collect_schema() {
+  return array(
+    'userpoints_collect_series' => array(
+      'description' => 'Holds series information for userpoints_collect',
+      'fields' => array(
+        'id' => array(
+          'description' => 'Timestamp ID',
+          'type' => 'serial',
+          'not null' => TRUE,
+        ),
+        'tid' => array(
+          'description' => 'Category ID',
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'timestamp' => array(
+          'description' => 'Timestamp',
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+        'status' => array(
+          'description' => 'Status',
+          'type' => 'int',
+          'size' => 'tiny',
+          'not null' => TRUE,
+          'default' => 0,
+        ),
+      ),
+      'primary key' =>  array('id'),
+      'indexes' => array(
+        'id' => array('id'),
+        'tid' => array('tid'),
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function userpoints_collect_uninstall() {
+  db_delete('variable')
+    ->condition('name', 'userpoints_collect_%', 'LIKE')
+    ->execute();
+
+  $vid = db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE module = 'userpoints_collect'")->fetchField();
+  if ( $vid && function_exists('taxonomy_vocabulary_delete') ) {
+    taxonomy_vocabulary_delete($vid);
+  }
+}
