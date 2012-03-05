@@ -157,10 +157,12 @@ function userpoints_collect_form_submit($form, &$form_state) {
  *
  * @param $account
  *   (optional) The account to check, if not given use currently logged in user.
+ * @param $tid
+ *   (optional) The Category ID or NULL.
  * @return
  *   Boolean TRUE if the account has the requested permission.
  */
-function userpoints_collect_access($account = NULL) {
+function userpoints_collect_access($account = NULL, $tid = NULL) {
   global $user;
 
   if ( !isset($account) ) {
@@ -173,7 +175,7 @@ function userpoints_collect_access($account = NULL) {
   }
 
   // Check if account has permission and is eligible to collect.
-  if ( user_access('use userpoints collect', $account) && userpoints_collect_eligibility($account) ) {
+  if ( user_access('use userpoints collect', $account) && userpoints_collect_eligibility($account, $tid) ) {
     return TRUE;
   }
 
@@ -188,13 +190,17 @@ function userpoints_collect_access($account = NULL) {
  * @return
  *   Boolean TRUE if the account is eligible.
  */
-function userpoints_collect_eligibility($account = NULL) {
+function userpoints_collect_eligibility($account = NULL, $tid = NULL) {
   if ( is_null($account) ) {
     $account = $GLOBALS['user'];
   }
 
+  if ( is_null($tid) ) {
+    $tid = userpoints_get_default_tid();
+  }
+
   // Load the last transaction by user.
-  $txn = userpoints_collect_last_txn($account);
+  $txn = userpoints_collect_last_txn($account, $tid);
   $timestamp = time();
   $timestamp_last_txn = isset($txn->time_stamp) ? $txn->time_stamp : FALSE;
   $mode = userpoints_collect_config('mode');
@@ -374,23 +380,26 @@ function userpoints_collect_eligibility_period_series($timestamp) {
  *
  * @param $account
  *   A user object.
+ * @param $tid
+ *   A Category ID.
  * @return
  *   A point transaction object or FALSE.
  */
-function userpoints_collect_last_txn($account) {
+function userpoints_collect_last_txn($account, $tid) {
   $txns = drupal_static(__FUNCTION__, array());
 
-  if ( !isset($txns[$account->uid]) ) {
-    $txns[$account->uid] = db_select('userpoints_txn', 'u')
+  if ( !isset($txns[$account->uid][$tid]) ) {
+     $txns[$account->uid][$tid] = db_select('userpoints_txn', 'u')
       ->fields('u')
       ->condition('uid', $account->uid)
+      ->condition('tid', $tid)
       ->orderBy('time_stamp', 'DESC')
       ->range(0, 1)
       ->execute()
       ->fetchObject();
   }
 
-  return $txns[$account->uid];
+  return $txns[$account->uid][$tid];
 }
 
 /**
