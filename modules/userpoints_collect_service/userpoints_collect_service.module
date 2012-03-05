@@ -55,6 +55,22 @@ function userpoints_collect_service_services_resources() {
             ),
           ),
         ),
+        'get' => array(
+          'help' => 'Add points to account if eligible.',
+          'file' => array('file' => 'inc', 'module' => 'userpoints_collect_service', 'name' => 'resources/userpoints_collect_resource'),
+          'callback' => '_userpoints_collect_resource_get',
+          'access callback' => '_userpoints_collect_resource_access',
+          'access arguments' => array('get'),
+          'access arguments append' => TRUE,
+          'args' => array(
+            array(
+              'name' => 'tid',
+              'description' => 'The Category ID.',
+              'type' => 'int',
+              'source' => array('path' => 0),
+            ),
+          ),
+        ),
       ),
     ),
   );

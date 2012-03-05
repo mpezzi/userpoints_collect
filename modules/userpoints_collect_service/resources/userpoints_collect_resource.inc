@@ -40,6 +40,19 @@ function _userpoints_collect_resource_add($userpoints = array()) {
 }
 
 /**
+ * Get point total from current user account.
+ */
+function _userpoints_collect_resource_get($tid = NULL) {
+  global $user;
+
+  if ( is_null($tid) ) {
+    $tid = userpoints_get_default_tid();
+  }
+
+  return userpoints_get_current_points($user->uid, $tid);
+}
+
+/**
  * Determine whether the current user can access a userpoints_collect resource.
  *
  * @param $op
@@ -50,7 +63,9 @@ function _userpoints_collect_resource_add($userpoints = array()) {
  *   Boolean TRUE if the current user has the requested permissions.
  */
 function _userpoints_collect_resource_access($op = 'eligibility', $args = array()) {
-  if ( $op == 'eligibility' || $op == 'add' || $op == 'retrieve' ) {
+  if ( $op == 'eligibility' || $op == 'add' || $op == 'get' ) {
     return user_access('use userpoints collect');
   }
+
+  return FALSE;
 }
