@@ -1,0 +1,182 @@
+<?php
+
+/**
+ * @file
+ * Provides test classes for UserpointsCollect module.
+ */
+
+
+/**
+ * UserpointsCollect base test class with various helper functions.
+ */
+class UserpointsCollectTestCase extends DrupalWebTestCase {
+
+}
+
+/**
+ * API Tests.
+ */
+class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
+  private $privileged_user;
+  private $authenticated_user;
+  private $start;
+  private $interval_settings;
+  private $series_settings;
+
+  /**
+   * Implements getInfo().
+   */
+  function getInfo() {
+    return array(
+      'name' => t('Userpoints Collect'),
+      'description' => t('Tests the userpoints_collect module for proper eligibility period calculations'),
+      'group' => t('Userpoints Collect'),
+    );
+  }
+
+  /**
+   * Implements setUp().
+   */
+  function setUp() {
+    parent::setUp('userpoints', 'userpoints_collect');
+
+    $this->privileged_user = $this->drupalCreateUser(array());
+    $this->authenticated_user = $this->drupalCreateUser(array());
+    $this->drupalLogin($this->authenticated_user);
+  }
+
+  /**
+   * Resets the interval its its default testing parameters and
+   * updates the test's $interval_settings variable
+   *
+   * @param $start_time
+   *    the start time for the very first eligibility period
+   *    default: 10 seconds from the current timestamp
+   */
+  function reset_intervals($start_time = NULL) {
+    if ( is_null($start_time) ) {
+      $this->start = time() + 10;
+    }
+    else {
+      $this->start = $start_time;
+    }
+    userpoints_collect_date_set_interval_settings(5, $this->start);
+    $this->interval_settings = variable_get('userpoints_collect_dates_interval', NULL);
+  }
+
+  /**
+   * Resets the interval its its default testing parameters and
+   * updates the test's $series_settings variable
+   *
+   */
+  function reset_series() {
+    $this->start = time() + 10;
+    userpoints_collect_generate_and_save_series(FALSE, FALSE, 5, 1/12);
+    $this->series_settings = variable_get('userpoints_collect_series', NULL);
+  }
+
+  /**
+   * Call userpoints_collect_eligibility_period() under
+   * interval mode
+   */
+  function testUserpointsCollectIntervalEligibility() {
+    variable_set('userpoints_collect_mode', 2);
+    // generate 5-second intervals repeating indefinitely
+    // with the first interval 10 seconds from now
+    $this->reset_intervals();
+
+    // check that the function returns false if user tries to claim a point
+    // before the first eligibilty period
+    $period = userpoints_collect_eligibility_period();
+    $this->assertTrue($period == FALSE, t("User cannot collect points before first eligibility period has started"));
+
+    sleep(11); // wait at least 10 seconds till the first eligibilty period starts
+
+    $period = userpoints_collect_eligibility_period();
+    $this->assertTrue(isset($period) && $period !== FALSE, t("User can collect points after the first eligibility period has started"));
+
+    // Checks to ensure eligiblity algorithm returns the correct
+    // time period for a given timestamp
+
+    // try to collect a point 7 seconds from now
+    // this should return:
+    // a period min of: start time + 1 interval * 5 secs/interval
+    // a period max of: start time + 2 intervals * 5 secs/interval
+
+    // reset the interval settings and sleep before trying again
+    $this->reset_intervals(time());
+    sleep(7);
+
+    $period = userpoints_collect_eligibility_period();
+    $this->assertTrue($period['min'] == $this->start + 1 * $this->interval_settings['interval'], t('Interval calculator returned correct min for the eligibility period'));
+    $this->assertTrue($period['max'] == $this->start + 2 * $this->interval_settings['interval'], t('Interval calculator returned correct max for the eligibility period'));
+
+    // handle boundary cases
+    $this->reset_intervals(time());
+
+    // Check eligibilty when claiming points at the time exactly
+    // "between" intervals.
+    // Ex. Given 5 second intervals starting from now,
+    // at exactly 5 seconds from now marks the time
+    // between the end of interval 1 and the start of interval 2.
+    // This point should be counted against the latter of
+    // the two intervals:  i.e.  the returned min and max timestamps should be
+    // current time + 1 interval and the current time + 2 interval periods
+    // respectively.
+
+    sleep(5);
+    $period = userpoints_collect_eligibility_period();
+    $this->assertTrue($period['min'] == $this->start + $this->interval_settings['interval'], t("Interval calculator returned correct min for a mid-interval boundary case."));
+    $this->assertTrue($period['max'] == $this->start + $this->interval_settings['interval'] * 2, t("Interval calculator returned correct max for a mid-interval boundary case."));
+  }
+
+  /**
+   * Call userpoints_collect_eligibility_period() under
+   * series mode
+   */
+  function testUserpointsCollectSeriesEligibility() {
+    variable_set('userpoints_collect_mode', 1);
+
+    // for testing, default to a series set of timestamps
+    // separated by 5 seconds each, the first being 10 seconds
+    // from now
+    $this->reset_series();
+
+    // check that the function returns false if user tries to claim a point
+    // before the first eligibilty period
+    $period = userpoints_collect_eligibility_period();
+    $this->assertTrue($period == FALSE, t("User cannot collect points before first eligibility period has started"));
+
+    sleep(11); // wait at least 10 seconds till the first eligibilty period starts
+
+    $period = userpoints_collect_eligibility_period();
+    $this->assertTrue(isset($period) && $period !== FALSE, t("User can collect points after the first eligibility period has started"));
+
+    // check that the function returns false if user tries to claim a point
+    // after the last eligibility period
+
+    // make 2 points of eligilibity (i.e. 1 period), 2 seconds apart
+    userpoints_collect_generate_and_save_series(FALSE, FALSE, 2, 1/30);
+
+    sleep(6);   // wait 6 seconds to ensure all eligilibilty periods have elapsed
+    $period = userpoints_collect_eligibility_period();
+    $this->assertTrue($period == FALSE, t('User cannot collect points after the last eligiblity period'));
+
+    // Checks to ensure eligibility algorithm returns the correct
+    // time period for a given timestamp
+
+    // try to collect a point 17 seconds from now
+    // this should return:
+    // a period min of: 2nd lowest timestamp
+    // a period max of: 3rd lowest timestamp
+    // Note: that the series array of timestamps is sorted  from highest to lowest
+
+    // reset the series settings and sleep before trying again
+    $this->reset_series();
+    sleep(17);    // recall first timestamp starts 10 seconds after series was generated
+
+    $period = userpoints_collect_eligibility_period();
+    $this->assertTrue($period['min'] == $this->series_settings[1], t('Series calculator returned correct min for the eligibility period'));
+    $this->assertTrue($period['max'] == $this->series_settings[2], t('Series calculator returned correct max for the eligibility period'));
+  }
+}

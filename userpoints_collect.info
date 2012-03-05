@@ -4,3 +4,5 @@ package = Userpoints
 core = 7.x
 
 dependencies[] = userpoints
+
+files[] = tests/userpoints_collect.test
