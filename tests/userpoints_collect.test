@@ -152,12 +152,20 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
     $period = userpoints_collect_eligibility_period();
     $this->assertTrue(isset($period) && $period !== FALSE, t("User can collect points after the first eligibility period has started"));
 
-    $this->reset_series();
+    // check that the function returns false if user tries to claim a point
+    // after the last eligibility period
+
+    // make 2 points of eligilibity (i.e. 1 period), 2 seconds apart
+    userpoints_collect_generate_and_save_series(FALSE, FALSE, 2, 1/30);
+
+    sleep(6);   // wait 6 seconds to ensure all eligilibilty periods have elapsed
+    $period = userpoints_collect_eligibility_period();
+    $this->assertTrue($period == FALSE, t('User cannot collect points after the last eligiblity period'));
 
     // Checks to ensure eligibility algorithm returns the correct
     // time period for a given timestamp
 
-    // try to collect a point 7 seconds from now
+    // try to collect a point 17 seconds from now
     // this should return:
     // a period min of: 2nd lowest timestamp
     // a period max of: 3rd lowest timestamp
@@ -168,9 +176,7 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
     sleep(17);    // recall first timestamp starts 10 seconds after series was generated
 
     $period = userpoints_collect_eligibility_period();
-
-    $this->assertTrue($period['min'] == $this->series_settings[count($this->series_settings) - 2], t('Series calculator returned correct min for the eligibility period'));
-    $this->assertTrue($period['max'] == $this->series_settings[count($this->series_settings) - 3], t('Series calculator returned correct max for the eligibility period'));
-
+    $this->assertTrue($period['min'] == $this->series_settings[1], t('Series calculator returned correct min for the eligibility period'));
+    $this->assertTrue($period['max'] == $this->series_settings[2], t('Series calculator returned correct max for the eligibility period'));
   }
 }
