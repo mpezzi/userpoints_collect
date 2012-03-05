@@ -5,9 +5,16 @@
  * Provides a block for users to collect points within time constraints.
  */
 
-
+/**
+ * Series mode checking for eligibility.
+ */
 define('USERPOINTS_COLLECT_MODE_SERIES', 1);
+
+/**
+ * Interval mode checking for eligibility.
+ */
 define('USERPOINTS_COLLECT_MODE_INTERVAL', 2);
+
 
 /**
  * Implements hook_permission().
@@ -76,30 +83,7 @@ function userpoints_collect_block_view($delta = '') {
 }
 
 /**
- * Returns an array containing configuration settings.
- *
- * @param $variable
- *   A string representing a configuration variable.
- * @return
- *   A saved config variable or an array of all variables.
- */
-function userpoints_collect_config($variable = NULL) {
-  $config = array(
-    'mode' => variable_get('userpoints_collect_mode', USERPOINTS_COLLECT_MODE_INTERVAL),
-    'points' => variable_get('userpoints_collect_points', 1),
-    'submit_label' => variable_get('userpoints_collect_submit_label', 'Collect now!'),
-    'return_label' => variable_get('userpoints_collect_return_label', 'Back to Facebook'),
-    'return_url' => variable_get('userpoints_collect_return_url', 'http://facebook.com'),
-    'no_ballots_label' => variable_get('userpoints_collect_no_ballots_label', 'No more ballots remaining'),
-    'next_ballot_label' => variable_get('userpoints_collect_next_ballot_label', 'Next ballot available in @timeleft'),
-    'after_collect_path' => variable_get('userpoints_collect_after_collect_path', '<front>'),
-  );
-
-  return isset($config[$variable]) ? $config[$variable] : $config;
-}
-
-/**
- * Returns a Userpoints collect form.
+ * Userpoints Collect Form.
  */
 function userpoints_collect_form($form, &$form_state) {
   global $user;
@@ -132,14 +116,14 @@ function userpoints_collect_form($form, &$form_state) {
 }
 
 /**
- * Validate a Userpoints collect form submission.
+ * Validation Callback: Userpoints Collect Form.
  */
 function userpoints_collect_form_validate($form, &$form_state) {
   // @TODO: add some sort of validation here.
 }
 
 /**
- * Process a Userpoints collect form submission.
+ * Submit Callback: Userpoints Collect Form.
  */
 function userpoints_collect_form_submit($form, &$form_state) {
   global $user;
@@ -613,4 +597,27 @@ function userpoints_collect_generate_and_save_series($random_dist = FALSE, $shuf
   foreach($series as $timestamp) {
     drupal_write_record('userpoints_collect_series', $timestamp);
   }
+}
+
+/**
+ * Returns an array containing configuration settings.
+ *
+ * @param $variable
+ *   A string representing a configuration variable.
+ * @return
+ *   A saved config variable or an array of all variables.
+ */
+function userpoints_collect_config($variable = NULL) {
+  $config = array(
+    'mode' => variable_get('userpoints_collect_mode', USERPOINTS_COLLECT_MODE_INTERVAL),
+    'points' => variable_get('userpoints_collect_points', 1),
+    'submit_label' => variable_get('userpoints_collect_submit_label', 'Collect now!'),
+    'return_label' => variable_get('userpoints_collect_return_label', 'Back to Facebook'),
+    'return_url' => variable_get('userpoints_collect_return_url', 'http://facebook.com'),
+    'no_ballots_label' => variable_get('userpoints_collect_no_ballots_label', 'No more ballots remaining'),
+    'next_ballot_label' => variable_get('userpoints_collect_next_ballot_label', 'Next ballot available in @timeleft'),
+    'after_collect_path' => variable_get('userpoints_collect_after_collect_path', '<front>'),
+  );
+
+  return isset($config[$variable]) ? $config[$variable] : $config;
 }
