@@ -203,13 +203,15 @@ function userpoints_collect_restriction_generate_series($tid = NULL, $number = 1
  *
  * @param $account
  *   (optional) A user object.
+ * @param $timestamp
+ *   (optional) A timestamp.
  * @param $tid
  *   (optional) A Category ID.
  * @return
  *   TRUE if the account is eligible to collect a point.
  */
 function userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid = NULL) {
-  $eligible = USERPOINTS_COLLECT_IS_ELIGIBLE;
+  $eligibility = USERPOINTS_COLLECT_IS_ELIGIBLE;
 
   if ( is_null($account) ) {
     $account = $GLOBALS['user'];
@@ -229,13 +231,55 @@ function userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid
     $last_txn = userpoints_collect_last_txn($account, $tid);
     foreach ( $restrictions as $restriction ) {
       $function = 'userpoints_collect_eligibility_' . $restriction->type;
-      if ( $eligible == USERPOINTS_COLLECT_IS_ELIGIBLE && function_exists($function) ) {
-        $eligible = $function($restriction, $timestamp, $last_txn);
+      if ( $eligibility == USERPOINTS_COLLECT_IS_ELIGIBLE && function_exists($function) ) {
+        $check = $function($restriction, $timestamp, $last_txn);
+        $eligibility = $check['eligibility'];
       }
     }
   }
 
-  return $eligible;
+  return $eligibility;
+}
+
+/**
+ * Returns the time until an account is eligible to collect a point.
+ *
+ * @param $account
+ *   (optional) A user object.
+ * @param $timestamp
+ *   (optional) A timestamp.
+ * @param $tid
+ *   (optional) A Category ID.
+ * @return
+ *   The number of seconds until the account is eligible to collect a point.
+ */
+function userpoints_collect_eligibility_next($account = NULL, $timestamp = NULL, $tid = NULL) {
+  $eligibility = userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid = NULL);
+
+  if ( isset($eligibility['max']) ) {
+    return $eligibility['max'] - $timestamp;
+  }
+
+  return -1;
+}
+
+/**
+ * Return the amount of time left until an account is eligible to collect a point.
+ */
+function userpoints_collect_eligibility_next_time($account = NULL, $timestamp = NULL, $tid = NULL) {
+  $eligibility = userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid = NULL);
+
+  if ( $eligibility['eligibility'] == USERPOINTS_COLLECT_IS_NOT_ELIGIBLE && isset($eligibility['max']) ) {
+    return format_interval($eligibility['max'] - $timestamp);
+  }
+  elseif ( $eligibility['eligibility'] == USERPOINTS_COLLECT_IS_EARLY ) {
+    return format_interval($eligibility['start'] - $timestamp);
+  }
+  elseif ( $eligibility['eligibility'] == USERPOINTS_COLLECT_IS_LATE ) {
+    return t('Too late buddy');
+  }
+
+  return '';
 }
 
 /**
@@ -256,10 +300,10 @@ function userpoints_collect_eligibility_interval($restriction, $timestamp, $last
   $length = $restriction->data->length;
 
   if ( $timestamp < $start ) {
-    return USERPOINTS_COLLECT_IS_EARLY;
+    return array('eligibility' => USERPOINTS_COLLECT_IS_EARLY);
   }
   elseif ( $timestamp >= $end ) {
-    return USERPOINTS_COLLECT_IS_LATE;
+    return array('eligibility' => USERPOINTS_COLLECT_IS_LATE);
   }
   else {
     $num_intervals = ( $timestamp - $start ) / $length;
@@ -288,13 +332,21 @@ function userpoints_collect_eligibility_interval($restriction, $timestamp, $last
 
     if ( $timestamp >= $min && $timestamp < $max ) {
       if ( !isset($last_txn->time_stamp) || ( isset($last_txn->time_stamp) && $last_txn->time_stamp < $min ) ) {
-        return USERPOINTS_COLLECT_IS_ELIGIBLE;
+        return array(
+          'eligibility' => USERPOINTS_COLLECT_IS_ELIGIBLE,
+          'check' => $timestamp,
+          'last' => isset($last_txn->time_stamp) ? $last_txn->time_stamp : 0,
+          'start' => $start,
+          'end' => $end,
+          'period_start' => $min,
+          'period_end' => $max,
+        );
       }
     }
 
   }
 
-  return USERPOINTS_COLLECT_IS_NOT_ELIGIBLE;
+  return array('eligibility' => USERPOINTS_COLLECT_IS_NOT_ELIGIBLE);
 }
 
 /**
@@ -315,33 +367,46 @@ function userpoints_collect_eligibility_series($restriction, $timestamp, $last_t
 
   // Too early, not available.
   if ( $timestamp < $series[0]->timestamp ) {
-    return USERPOINTS_COLLECT_IS_EARLY;
+    return array('eligibility' => USERPOINTS_COLLECT_IS_EARLY);
   }
   // Too late, not available.
   elseif ( $timestamp >= $series[$s - 1]->timestamp ) {
-    return USERPOINTS_COLLECT_IS_LATE;
+    return array('eligibility' => USERPOINTS_COLLECT_IS_LATE);
   }
   // In between ...
   else {
     for ( $i = 0; $i < $s - 1; $i++ ) {
       if ( $timestamp >= $series[$i]->timestamp && $timestamp < $series[$i + 1]->timestamp ) {
+        $start = $series[0]->timestamp;
+        $end = $series[$s - 1]->timestamp;
+        $min = $series[$i]->timestamp;
+        $max = $series[$i + 1]->timestamp;
+
         if ( user_access('debug userpoints collect') ) {
           drupal_set_message(t('Check: @time', array('@time' => format_date($timestamp, 'custom', USERPOINTS_COLLECT_DEBUG_DATE_FORMAT))));
           drupal_set_message(t('Last transaction: @time', array('@time' => isset($last_txn->time_stamp) ? format_date($last_txn->time_stamp, 'custom', USERPOINTS_COLLECT_DEBUG_DATE_FORMAT) : t('No previous transaction'))));
-          drupal_set_message(t('Restriction Start Time: @time', array('@time' => format_date($series[0]->timestamp, 'custom', USERPOINTS_COLLECT_DEBUG_DATE_FORMAT))));
-          drupal_set_message(t('Restriction End Time: @time', array('@time' => format_date($series[$s - 1]->timestamp, 'custom', USERPOINTS_COLLECT_DEBUG_DATE_FORMAT))));
-          drupal_set_message(t('Period Start: @time', array('@time' => format_date($series[$i]->timestamp, 'custom', USERPOINTS_COLLECT_DEBUG_DATE_FORMAT))));
-          drupal_set_message(t('Period End: @time', array('@time' => format_date($series[$i + 1]->timestamp, 'custom', USERPOINTS_COLLECT_DEBUG_DATE_FORMAT))));
+          drupal_set_message(t('Restriction Start Time: @time', array('@time' => format_date($start, 'custom', USERPOINTS_COLLECT_DEBUG_DATE_FORMAT))));
+          drupal_set_message(t('Restriction End Time: @time', array('@time' => format_date($end, 'custom', USERPOINTS_COLLECT_DEBUG_DATE_FORMAT))));
+          drupal_set_message(t('Period Start: @time', array('@time' => format_date($min, 'custom', USERPOINTS_COLLECT_DEBUG_DATE_FORMAT))));
+          drupal_set_message(t('Period End: @time', array('@time' => format_date($max, 'custom', USERPOINTS_COLLECT_DEBUG_DATE_FORMAT))));
         }
 
         if ( !isset($last_txn->time_stamp) || ( isset($last_txn->time_stamp) && $last_txn->time_stamp < $series[$i] ) ) {
-          return USERPOINTS_COLLECT_IS_ELIGIBLE;
+          return array(
+            'eligibility' => USERPOINTS_COLLECT_IS_ELIGIBLE,
+            'check' => $timestamp,
+            'last' => isset($last_txn->time_stamp) ? $last_txn->time_stamp : 0,
+            'start' => $start,
+            'end' => $end,
+            'period_start' => $min,
+            'period_end' => $max,
+          );
         }
       }
     }
   }
 
-  return USERPOINTS_COLLECT_IS_NOT_ELIGIBLE;
+  return array('eligibility' => USERPOINTS_COLLECT_IS_NOT_ELIGIBLE);
 }
 
 /**
