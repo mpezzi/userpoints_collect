@@ -207,7 +207,6 @@ function userpoints_collect_eligibility_lengths() {
  */
 function userpoints_collect_config($variable = NULL) {
   $config = array(
-    'mode' => variable_get('userpoints_collect_mode', USERPOINTS_COLLECT_MODE_INTERVAL),
     'points' => variable_get('userpoints_collect_points', 1),
     'submit_label' => variable_get('userpoints_collect_submit_label', 'Collect now!'),
     'return_label' => variable_get('userpoints_collect_return_label', 'Back to Facebook'),
