@@ -40,7 +40,7 @@ define('USERPOINTS_COLLECT_DEBUG_DATE_FORMAT', 'd M Y H:i:s');
  *   A Restriction Object or FALSE
  */
 function userpoints_collect_restriction_load($rid) {
-  $restrictions = drupal_static(__FUNCTION__, array());
+  $restrictions = &drupal_static(__FUNCTION__, array());
 
   if ( !isset($restrictions[$rid]) ) {
     $restriction = db_select('userpoints_collect_restrictions', 'r')
@@ -236,12 +236,15 @@ function userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid
         $eligible = $eligibility['status'];
       }
     }
+
+    // Debug the eligibility object for privileged users.
+    userpoints_collect_eligibility_debug($eligibility);
+
+    return $eligibility;
   }
 
-  // Debug the eligibility object for privileged users.
-  userpoints_collect_eligibility_debug($eligibility);
-
-  return $eligibility;
+  // Something went wrong.
+  return FALSE;
 }
 
 /**
@@ -257,7 +260,7 @@ function userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid
  *   The number of seconds until the account is eligible to collect a point.
  */
 function userpoints_collect_eligibility_next($account = NULL, $timestamp = NULL, $tid = NULL) {
-  $eligibility = userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid = NULL);
+  $eligibility = userpoints_collect_eligibility($account, $timestamp, $tid);
 
   if ( isset($eligibility['max']) ) {
     return $eligibility['max'] - $timestamp;
@@ -270,7 +273,7 @@ function userpoints_collect_eligibility_next($account = NULL, $timestamp = NULL,
  * Return the amount of time left until an account is eligible to collect a point.
  */
 function userpoints_collect_eligibility_next_timeleft($account = NULL, $timestamp = NULL, $tid = NULL) {
-  $eligibility = userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid = NULL);
+  $eligibility = userpoints_collect_eligibility($account, $timestamp, $tid);
 
   if ( $eligibility['status'] == USERPOINTS_COLLECT_IS_NOT_ELIGIBLE && isset($eligibility['period_end']) ) {
     return format_interval($eligibility['period_end'] - $eligibility['check']);

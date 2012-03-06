@@ -84,14 +84,17 @@ function userpoints_collect_block_view($delta = '') {
 function userpoints_collect_form($form, &$form_state) {
   global $user;
 
-  if ( userpoints_collect_access() ) {
+  $timestamp = time();
+  $tid = userpoints_collect_config('tid');
+
+  if ( userpoints_collect_access($user, $timestamp, $tid) ) {
     $form['submit'] = array(
       '#type' => 'submit',
       '#value' => userpoints_collect_config('submit_label'),
     );
   }
   else {
-    $timeleft = userpoints_collect_eligibility_next_timeleft();
+    $timeleft = userpoints_collect_eligibility_next_timeleft($user, $timestamp, $tid);
 
     $form['link'] = array(
       '#prefix' => '<p>',
@@ -99,11 +102,13 @@ function userpoints_collect_form($form, &$form_state) {
       '#markup' => l(userpoints_collect_config('return_label'), userpoints_collect_config('return_url'), array('attributes' => array('class' => array('btn', 'btn-large', 'btn-primary')))),
     );
 
-    $form['timeleft'] = array(
-      '#prefix' => '<p>',
-      '#suffix' => '</p>',
-      '#markup' => $timeleft ? format_string(userpoints_collect_config('next_ballot_label'), array('@timeleft' => $timeleft)) : userpoints_collect_config('no_ballots_label'),
-    );
+    if ( $timeleft ) {
+      $form['timeleft'] = array(
+        '#prefix' => '<p>',
+        '#suffix' => '</p>',
+        '#markup' => format_string(userpoints_collect_config('next_ballot_label'), array('@timeleft' => $timeleft)),
+      );
+    }
 
     $form['#disabled'] = TRUE;
   }
@@ -126,6 +131,7 @@ function userpoints_collect_form_submit($form, &$form_state) {
 
   userpoints_collect_add(array(
     'uid' => $user->uid,
+    'tid' => userpoints_collect_config('tid'),
     'points' => userpoints_collect_config('points'),
   ));
 
@@ -167,7 +173,7 @@ function userpoints_collect_access($account = NULL, $timestamp = NULL, $tid = NU
  * Add points for a user.
  */
 function userpoints_collect_add($params) {
-  if ( userpoints_collect_access(user_load($params['uid'])) ) {
+  if ( userpoints_collect_access(user_load($params['uid']), NULL, userpoints_collect_config('tid')) ) {
     return userpoints_userpointsapi($params);
   }
 
@@ -207,6 +213,7 @@ function userpoints_collect_eligibility_lengths() {
  */
 function userpoints_collect_config($variable = NULL) {
   $config = array(
+    'tid' => variable_get('userpoints_collect_tid', userpoints_get_default_tid()),
     'points' => variable_get('userpoints_collect_points', 1),
     'submit_label' => variable_get('userpoints_collect_submit_label', 'Collect now!'),
     'return_label' => variable_get('userpoints_collect_return_label', 'Back to Facebook'),

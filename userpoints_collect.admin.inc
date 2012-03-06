@@ -10,6 +10,12 @@
  * Administrative Settings Form.
  */
 function userpoints_collect_admin_settings($form, &$form_state) {
+  $form['userpoints_collect_tid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Category ID'),
+    '#required' => TRUE,
+    '#default_value' => userpoints_collect_config('tid'),
+  );
   $form['userpoints_collect_points'] = array(
     '#type' => 'textfield',
     '#title' => t('Number of points to collect'),
