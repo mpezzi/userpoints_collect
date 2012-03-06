@@ -178,7 +178,7 @@ function userpoints_collect_access($account = NULL, $tid = NULL) {
  * @return
  *   Boolean TRUE if the account is eligible.
  */
-function userpoints_collect_eligibility($account = NULL, $tid = NULL) {
+function xuserpoints_collect_eligibility($account = NULL, $tid = NULL) {
   if ( is_null($account) ) {
     $account = $GLOBALS['user'];
   }
@@ -225,7 +225,7 @@ function userpoints_collect_eligibility($account = NULL, $tid = NULL) {
  * @return
  *   A array containing min, max, first and final or FALSE.
  */
-function userpoints_collect_eligibility_period($mode, $timestamp, $tid) {
+function xuserpoints_collect_eligibility_period($mode, $timestamp, $tid) {
   switch ( $mode ) {
     case USERPOINTS_COLLECT_MODE_INTERVAL:
       return userpoints_collect_eligibility_period_interval($timestamp, $tid);
@@ -246,7 +246,7 @@ function userpoints_collect_eligibility_period($mode, $timestamp, $tid) {
  * @return
  *   A array containing min, max, first and final or FALSE.
  */
-function userpoints_collect_eligibility_period_interval($timestamp, $tid) {
+function xuserpoints_collect_eligibility_period_interval($timestamp, $tid) {
   // retrieve interval settings from variables table and do
   // an interval-based calculation for next eligibility period
   $interval_settings = variable_get('userpoints_collect_dates_interval', NULL);
@@ -323,7 +323,7 @@ function userpoints_collect_eligibility_period_interval($timestamp, $tid) {
  * @return
  *   A array containing min, max, first and final or FALSE.
  */
-function userpoints_collect_eligibility_period_series($timestamp, $tid) {
+function xuserpoints_collect_eligibility_period_series($timestamp, $tid) {
   // retrieve the series timestamp data from db
   $series = db_select('userpoints_collect_series', 's')
     ->fields('s')
@@ -377,7 +377,7 @@ function userpoints_collect_eligibility_period_series($timestamp, $tid) {
  * @return
  *   A point transaction object or FALSE.
  */
-function userpoints_collect_last_txn($account, $tid) {
+function xuserpoints_collect_last_txn($account, $tid) {
   $txns = drupal_static(__FUNCTION__, array());
 
   if ( !isset($txns[$account->uid][$tid]) ) {

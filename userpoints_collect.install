@@ -42,8 +42,41 @@ function userpoints_collect_schema() {
     ),
     'primary key' =>  array('rid'),
     'indexes' => array(
-      'rid' => array('rid'),
       'tid' => array('tid'),
+    ),
+  );
+
+  $schema['userpoints_collect_restrictions_interval'] = array(
+    'description' => 'Holds restriction interval information for userpoints collect',
+    'fields' => array(
+      'rid' => array(
+        'description' => 'Restriction ID',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'start' => array(
+        'description' => 'Start Timestamp',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'end' => array(
+        'description' => 'End Timestamp',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'length' => array(
+        'description' => 'Length',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'rid' => array('rid'),
     ),
   );
 
@@ -78,7 +111,6 @@ function userpoints_collect_schema() {
     ),
     'primary key' =>  array('sid'),
     'indexes' => array(
-      'sid' => array('sid'),
       'rid' => array('rid'),
     ),
   );
