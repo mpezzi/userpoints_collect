@@ -3,7 +3,7 @@ description = Exposes userpoints collect functionality via a service.
 package = Userpoints
 core = 7.x
 
-files[] = tests/userpoints_collect_service.test
+files[] = userpoints_collect_service.test
 
 dependencies[] = userpoints
 dependencies[] = userpoints_collect
