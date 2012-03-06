@@ -208,7 +208,7 @@ function userpoints_collect_restriction_generate_series($tid = NULL, $number = 1
  * @return
  *   TRUE if the account is eligible to collect a point.
  */
-function userpoints_collect_eligibility($account = NULL, $tid = NULL) {
+function userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid = NULL) {
   $eligible = USERPOINTS_COLLECT_IS_ELIGIBLE;
 
   if ( is_null($account) ) {
@@ -219,12 +219,14 @@ function userpoints_collect_eligibility($account = NULL, $tid = NULL) {
     $tid = userpoints_get_default_tid();
   }
 
+  if ( is_null($timestamp) ) {
+    $timestamp = time();
+  }
+
   $restrictions = userpoints_collect_restriction_load_multiple(array('status' => 1, 'tid' => $tid));
 
   if ( count($restrictions) > 0 ) {
-    $timestamp = time();
     $last_txn = userpoints_collect_last_txn($account, $tid);
-
     foreach ( $restrictions as $restriction ) {
       $function = 'userpoints_collect_eligibility_' . $restriction->type;
       if ( $eligible == USERPOINTS_COLLECT_IS_ELIGIBLE && function_exists($function) ) {
