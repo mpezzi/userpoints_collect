@@ -16,6 +16,8 @@ define('USERPOINTS_COLLECT_MODE_SERIES', 1);
 define('USERPOINTS_COLLECT_MODE_INTERVAL', 2);
 
 
+require_once dirname(__FILE__) . '/userpoints_collect.inc';
+
 /**
  * Implements hook_permission().
  */
@@ -167,10 +169,12 @@ function userpoints_collect_access($account = NULL, $tid = NULL) {
 }
 
 /**
- * Returns whether a user is eligible to collect a point.
+ * Determine whether an account is eligible to collect a point.
  *
  * @param $account
  *   (optional) The account to check, if not given use the currently logged in user.
+ * @param $tid
+ *   (optional) The Category ID.
  * @return
  *   Boolean TRUE if the account is eligible.
  */
