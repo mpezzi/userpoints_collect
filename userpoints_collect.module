@@ -158,7 +158,7 @@ function userpoints_collect_form_submit($form, &$form_state) {
     'points' => userpoints_collect_config('points'),
   ));
 
-  $form_state['redirect'] = userpoints_collect_config('after_collect_path');
+  $form_state['redirect'] = userpoints_collect_config('redirect');
 }
 
 /**
@@ -247,7 +247,7 @@ function userpoints_collect_config($variable = NULL) {
     'return_url' => variable_get('userpoints_collect_return_url', 'http://facebook.com'),
     'no_ballots_label' => variable_get('userpoints_collect_no_ballots_label', 'No more ballots remaining'),
     'next_ballot_label' => variable_get('userpoints_collect_next_ballot_label', 'Next ballot available in @timeleft'),
-    'after_collect_path' => variable_get('userpoints_collect_after_collect_path', '<front>'),
+    'redirect' => variable_get('userpoints_collect_redirect', '<front>'),
   );
 
   return isset($config[$variable]) ? $config[$variable] : $config;

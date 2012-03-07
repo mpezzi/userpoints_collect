@@ -50,7 +50,7 @@ function userpoints_collect_variable_info($options) {
     'required' => TRUE,
     'group' => 'userpoints_collect',
   );
-  $variables['userpoints_collect_after_collect_path'] = array(
+  $variables['userpoints_collect_redirect'] = array(
     'type' => 'string',
     'title' => t('After collect path', array(), $options),
     'description' => 'Path to redirect user to after collecting a point',

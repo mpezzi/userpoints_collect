@@ -53,12 +53,12 @@ function userpoints_collect_admin_settings($form, &$form_state) {
     '#required' => TRUE,
     '#default_value' => userpoints_collect_config('next_ballot_label'),
   );
-  $form['userpoints_collect_after_collect_path'] = array(
+  $form['userpoints_collect_redirect'] = array(
     '#type' => 'textfield',
-    '#title' => t('After collect path'),
+    '#title' => t('Redirect after collecting point'),
     '#description' => 'Redirect to this path after user collects a point.',
     '#required' => TRUE,
-    '#default_value' => userpoints_collect_config('after_collect_path'),
+    '#default_value' => userpoints_collect_config('redirect'),
   );
 
   return system_settings_form($form);
