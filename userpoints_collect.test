@@ -47,8 +47,7 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
   }
 
   /**
-   * Call userpoints_collect_eligibility_period() under
-   * interval mode
+   * Call userpoints_collect_eligibility() with interval restrictions
    */
   function testUserpointsCollectIntervalEligibility() {
     /**
@@ -120,8 +119,7 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
   }
 
   /**
-   * Call userpoints_collect_eligibility_period() under
-   * series mode
+   * Call userpoints_collect_eligibility() with series restrictions
    */
   function testUserpointsCollectSeriesEligibility() {
     /**
