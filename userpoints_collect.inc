@@ -235,75 +235,51 @@ function userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid
       }
     }
 
+    // Calculate the timeleft.
+    userpoints_collect_eligibility_next($eligibility);
+
     // Debug the eligibility object for privileged users.
     userpoints_collect_eligibility_debug($eligibility);
 
     return $eligibility;
   }
+  else {
+    // No restrictions, is eligible.
+    $eligibility = array(
+      'status' => USERPOINTS_COLLECT_IS_ELIGIBLE,
+      'check' => $timestamp,
+      'start' => 0,
+      'end' => 0,
+    );
 
-  // No restrictions, is eligible.
-  return array(
-    'status' => USERPOINTS_COLLECT_IS_ELIGIBLE,
-    'check' => $timestamp,
-    'start' => 0,
-    'end' => 0,
-  );
+    // Calculate the timeleft.
+    userpoints_collect_eligibility_next($eligibility);
+
+    return $eligibility;
+  }
 }
 
 /**
- * Returns the time until an account is eligible to collect a point.
+ * Adds the next eligibility time information.
  *
- * @param $account
- *   (optional) A user object.
- * @param $timestamp
- *   (optional) A timestamp.
- * @param $tid
- *   (optional) A Category ID.
+ * @param $eligibility
+ *   An eligibility array.
  * @return
  *   The number of seconds until the account is eligible to collect a point.
  */
-function userpoints_collect_eligibility_next($account = NULL, $timestamp = NULL, $tid = NULL) {
-  $eligibility = userpoints_collect_eligibility($account, $timestamp, $tid);
-
+function userpoints_collect_eligibility_next(&$eligibility) {
   if ( $eligibility['status'] == USERPOINTS_COLLECT_IS_NOT_ELIGIBLE && isset($eligibility['period_end']) ) {
-    return $eligibility['period_end'] - $eligibility['check'];
+    $eligibility['next'] = $eligibility['period_end'] - $eligibility['check'];
   }
   elseif ( $eligibility['status'] == USERPOINTS_COLLECT_IS_EARLY ) {
-    return $eligibility['start'] - $eligibility['check'];
+    $eligibility['next'] = $eligibility['start'] - $eligibility['check'];
   }
   elseif ( $eligibility['status'] == USERPOINTS_COLLECT_IS_LATE ) {
-    return -1;
+    $eligibility['next'] = -1;
   }
-
-  return 0;
-}
-
-/**
- * Return the amount of time left until an account is eligible to collect a point.
- *
- * @param $account
- *   (optional) A user object.
- * @param $timestamp
- *   (optional) A timestamp.
- * @param $tid
- *   (optional) A Category ID.
- * @return
- *   A string representation of how much time is left until the next eligibility period.
- */
-function userpoints_collect_eligibility_next_timeleft($account = NULL, $timestamp = NULL, $tid = NULL) {
-  $eligibility = userpoints_collect_eligibility($account, $timestamp, $tid);
-
-  if ( $eligibility['status'] == USERPOINTS_COLLECT_IS_NOT_ELIGIBLE && isset($eligibility['period_end']) ) {
-    return format_interval($eligibility['period_end'] - $eligibility['check']);
+  else {
+    $eligibility['next'] = 0;
   }
-  elseif ( $eligibility['status'] == USERPOINTS_COLLECT_IS_EARLY ) {
-    return format_interval($eligibility['start'] - $eligibility['check']);
-  }
-  elseif ( $eligibility['status'] == USERPOINTS_COLLECT_IS_LATE ) {
-    return t('Too late buddy');
-  }
-
-  return '';
 }
 
 /**

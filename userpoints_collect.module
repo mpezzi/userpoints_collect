@@ -85,32 +85,55 @@ function userpoints_collect_form($form, &$form_state) {
   global $user;
 
   $timestamp = time();
-  $tid = userpoints_collect_config('tid');
+  $cfg = userpoints_collect_config();
+  $eligibility = userpoints_collect_eligibility($user, time(), $cfg['tid']);
 
-  if ( userpoints_collect_access($user, $timestamp, $tid) ) {
+  if ( $eligibility['status'] == USERPOINTS_COLLECT_IS_ELIGIBLE ) {
     $form['submit'] = array(
       '#type' => 'submit',
-      '#value' => userpoints_collect_config('submit_label'),
+      '#value' => $cfg['submit_label'],
     );
   }
   else {
-    $timeleft = userpoints_collect_eligibility_next_timeleft($user, $timestamp, $tid);
+    switch ( $eligibility['status'] ) {
+      case USERPOINTS_COLLECT_IS_EARLY:
+        $note = format_string($cfg['note_is_early'], array(
+          '@start' => format_interval($eligibility['start']),
+        ));
+        break;
 
-    $form['link'] = array(
-      '#prefix' => '<p>',
-      '#suffix' => '</p>',
-      '#markup' => l(userpoints_collect_config('return_label'), userpoints_collect_config('return_url'), array('attributes' => array('class' => array('btn', 'btn-large', 'btn-primary')))),
-    );
+      case USERPOINTS_COLLECT_IS_LATE:
+        $note = format_string($cfg['note_is_late'], array(
+          '@end' => format_date($eligibility['end']),
+        ));
+        break;
 
-    if ( $timeleft ) {
-      $form['timeleft'] = array(
-        '#prefix' => '<p>',
-        '#suffix' => '</p>',
-        '#markup' => format_string(userpoints_collect_config('next_ballot_label'), array('@timeleft' => $timeleft)),
-      );
+      case USERPOINTS_COLLECT_IS_NOT_ELIGIBLE:
+        $note = format_string($cfg['note_is_not_eligible'], array(
+          '@timeleft' => format_interval($eligibility['next']),
+        ));
+        break;
     }
 
     $form['#disabled'] = TRUE;
+
+    $form['link'] = array(
+      '#prefix' => '<p class="link">',
+      '#suffix' => '</p>',
+      '#markup' => l($cfg['return_label'], $cfg['return_url'], array(
+        'attributes' => array(
+          'class' => array('btn', 'btn-primary', 'btn-large'),
+        ),
+      )),
+    );
+
+    if ( isset($note) ) {
+      $form['note'] = array(
+        '#prefix' => '<p class="note">',
+        '#suffix' => '</p>',
+        '#markup' => $note,
+      );
+    }
   }
 
   return $form;
@@ -215,6 +238,9 @@ function userpoints_collect_config($variable = NULL) {
   $config = array(
     'tid' => variable_get('userpoints_collect_tid', userpoints_get_default_tid()),
     'points' => variable_get('userpoints_collect_points', 1),
+    'note_is_early' => variable_get('userpoints_collect_note_is_early', 'Availability starts at @start'),
+    'note_is_late' => variable_get('userpoints_collect_note_is_late', 'Availability ended at @end'),
+    'note_is_not_eligible' => variable_get('userpoints_collect_note_is_not_eligible', 'Next point available in @timeleft'),
     'submit_label' => variable_get('userpoints_collect_submit_label', 'Collect now!'),
     'return_label' => variable_get('userpoints_collect_return_label', 'Back to Facebook'),
     'return_url' => variable_get('userpoints_collect_return_url', 'http://facebook.com'),
