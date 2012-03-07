@@ -236,6 +236,7 @@ function userpoints_collect_eligibility_lengths() {
  */
 function userpoints_collect_config($variable = NULL) {
   $config = array(
+    'debug' => variable_get('userpoints_collect_debug', FALSE),
     'tid' => variable_get('userpoints_collect_tid', userpoints_get_default_tid()),
     'points' => variable_get('userpoints_collect_points', 1),
     'note_is_early' => variable_get('userpoints_collect_note_is_early', 'Availability starts at @start'),
