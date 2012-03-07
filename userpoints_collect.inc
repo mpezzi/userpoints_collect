@@ -37,7 +37,7 @@ define('USERPOINTS_COLLECT_DEBUG_DATE_FORMAT', 'd M Y H:i:s');
  * @param $rid
  *   A Restriction ID.
  * @return
- *   A Restriction Object or FALSE
+ *   A Restriction object or FALSE
  */
 function userpoints_collect_restriction_load($rid) {
   $restrictions = &drupal_static(__FUNCTION__, array());
@@ -199,7 +199,7 @@ function userpoints_collect_restriction_generate_series($tid = NULL, $number = 1
 }
 
 /**
- * Determine whether an account is eligible to collect a point.
+ * Returns the eligibility of for an account to collect a point.
  *
  * @param $account
  *   (optional) A user object.
@@ -208,7 +208,7 @@ function userpoints_collect_restriction_generate_series($tid = NULL, $number = 1
  * @param $tid
  *   (optional) A Category ID.
  * @return
- *   TRUE if the account is eligible to collect a point.
+ *   An eligibility object.
  */
 function userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid = NULL) {
   if ( is_null($account) ) {
@@ -316,7 +316,7 @@ function userpoints_collect_eligibility_next_timeleft($account = NULL, $timestam
  * @param $last_txn
  *   The last transaction performed.
  * @return
- *   A constant of USERPOINTS_COLLECT_IS_EARLY, USERPOINTS_COLLECT_IS_LATE, USERPOINTS_COLLECT_IS_ELIGIBLE or USERPOINTS_COLLECT_IS_NOT_ELIGIBLE.
+ *   An array containing eligibility information.
  */
 function userpoints_collect_eligibility_interval($restriction, $timestamp, $last_txn) {
   $start = $restriction->data->start;
@@ -391,7 +391,7 @@ function userpoints_collect_eligibility_interval($restriction, $timestamp, $last
  * @param $last_txn
  *   The last transaction performed.
  * @return
- *   A constant of USERPOINTS_COLLECT_IS_EARLY, USERPOINTS_COLLECT_IS_LATE, USERPOINTS_COLLECT_IS_ELIGIBLE or USERPOINTS_COLLECT_IS_NOT_ELIGIBLE.
+ *   An array containing eligibility information.
  */
 function userpoints_collect_eligibility_series($restriction, $timestamp, $last_txn) {
   $s = count($restriction->data);
@@ -486,6 +486,9 @@ function userpoints_collect_last_txn($account, $tid = NULL) {
 
 /**
  * Debug eligibility.
+ *
+ * @param $eligibility
+ *   An array containing eligibility information.
  */
 function userpoints_collect_eligibility_debug($eligibility) {
   if ( user_access('debug userpoints collect') ) {
