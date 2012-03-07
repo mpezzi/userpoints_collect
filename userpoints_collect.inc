@@ -37,7 +37,7 @@ define('USERPOINTS_COLLECT_DEBUG_DATE_FORMAT', 'd M Y H:i:s');
  * @param $rid
  *   A Restriction ID.
  * @return
- *   A Restriction Object or FALSE
+ *   A Restriction object or FALSE
  */
 function userpoints_collect_restriction_load($rid) {
   $restrictions = &drupal_static(__FUNCTION__, array());
@@ -199,7 +199,7 @@ function userpoints_collect_restriction_generate_series($tid = NULL, $number = 1
 }
 
 /**
- * Determine whether an account is eligible to collect a point.
+ * Returns the eligibility of for an account to collect a point.
  *
  * @param $account
  *   (optional) A user object.
@@ -208,11 +208,9 @@ function userpoints_collect_restriction_generate_series($tid = NULL, $number = 1
  * @param $tid
  *   (optional) A Category ID.
  * @return
- *   TRUE if the account is eligible to collect a point.
+ *   An eligibility object.
  */
 function userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid = NULL) {
-  $eligible = USERPOINTS_COLLECT_IS_ELIGIBLE;
-
   if ( is_null($account) ) {
     $account = $GLOBALS['user'];
   }
@@ -225,8 +223,8 @@ function userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid
     $tid = userpoints_get_default_tid();
   }
 
+  $eligible = USERPOINTS_COLLECT_IS_ELIGIBLE;
   $restrictions = userpoints_collect_restriction_load_multiple(array('status' => 1, 'tid' => $tid));
-
   if ( count($restrictions) > 0 ) {
     $last_txn = userpoints_collect_last_txn($account, $tid);
     foreach ( $restrictions as $restriction ) {
@@ -237,55 +235,51 @@ function userpoints_collect_eligibility($account = NULL, $timestamp = NULL, $tid
       }
     }
 
+    // Calculate the timeleft.
+    userpoints_collect_eligibility_next($eligibility);
+
     // Debug the eligibility object for privileged users.
     userpoints_collect_eligibility_debug($eligibility);
 
     return $eligibility;
   }
+  else {
+    // No restrictions, is eligible.
+    $eligibility = array(
+      'status' => USERPOINTS_COLLECT_IS_ELIGIBLE,
+      'check' => $timestamp,
+      'start' => 0,
+      'end' => 0,
+    );
 
-  // Something went wrong.
-  return FALSE;
+    // Calculate the timeleft.
+    userpoints_collect_eligibility_next($eligibility);
+
+    return $eligibility;
+  }
 }
 
 /**
- * Returns the time until an account is eligible to collect a point.
+ * Adds the next eligibility time information.
  *
- * @param $account
- *   (optional) A user object.
- * @param $timestamp
- *   (optional) A timestamp.
- * @param $tid
- *   (optional) A Category ID.
+ * @param $eligibility
+ *   An eligibility array.
  * @return
  *   The number of seconds until the account is eligible to collect a point.
  */
-function userpoints_collect_eligibility_next($account = NULL, $timestamp = NULL, $tid = NULL) {
-  $eligibility = userpoints_collect_eligibility($account, $timestamp, $tid);
-
-  if ( isset($eligibility['max']) ) {
-    return $eligibility['max'] - $timestamp;
-  }
-
-  return -1;
-}
-
-/**
- * Return the amount of time left until an account is eligible to collect a point.
- */
-function userpoints_collect_eligibility_next_timeleft($account = NULL, $timestamp = NULL, $tid = NULL) {
-  $eligibility = userpoints_collect_eligibility($account, $timestamp, $tid);
-
+function userpoints_collect_eligibility_next(&$eligibility) {
   if ( $eligibility['status'] == USERPOINTS_COLLECT_IS_NOT_ELIGIBLE && isset($eligibility['period_end']) ) {
-    return format_interval($eligibility['period_end'] - $eligibility['check']);
+    $eligibility['next'] = $eligibility['period_end'] - $eligibility['check'];
   }
   elseif ( $eligibility['status'] == USERPOINTS_COLLECT_IS_EARLY ) {
-    return format_interval($eligibility['start'] - $eligibility['check']);
+    $eligibility['next'] = $eligibility['start'] - $eligibility['check'];
   }
   elseif ( $eligibility['status'] == USERPOINTS_COLLECT_IS_LATE ) {
-    return t('Too late buddy');
+    $eligibility['next'] = -1;
   }
-
-  return '';
+  else {
+    $eligibility['next'] = 0;
+  }
 }
 
 /**
@@ -298,7 +292,7 @@ function userpoints_collect_eligibility_next_timeleft($account = NULL, $timestam
  * @param $last_txn
  *   The last transaction performed.
  * @return
- *   A constant of USERPOINTS_COLLECT_IS_EARLY, USERPOINTS_COLLECT_IS_LATE, USERPOINTS_COLLECT_IS_ELIGIBLE or USERPOINTS_COLLECT_IS_NOT_ELIGIBLE.
+ *   An array containing eligibility information.
  */
 function userpoints_collect_eligibility_interval($restriction, $timestamp, $last_txn) {
   $start = $restriction->data->start;
@@ -373,7 +367,7 @@ function userpoints_collect_eligibility_interval($restriction, $timestamp, $last
  * @param $last_txn
  *   The last transaction performed.
  * @return
- *   A constant of USERPOINTS_COLLECT_IS_EARLY, USERPOINTS_COLLECT_IS_LATE, USERPOINTS_COLLECT_IS_ELIGIBLE or USERPOINTS_COLLECT_IS_NOT_ELIGIBLE.
+ *   An array containing eligibility information.
  */
 function userpoints_collect_eligibility_series($restriction, $timestamp, $last_txn) {
   $s = count($restriction->data);
@@ -468,6 +462,9 @@ function userpoints_collect_last_txn($account, $tid = NULL) {
 
 /**
  * Debug eligibility.
+ *
+ * @param $eligibility
+ *   An array containing eligibility information.
  */
 function userpoints_collect_eligibility_debug($eligibility) {
   if ( user_access('debug userpoints collect') ) {
