@@ -153,7 +153,7 @@ function userpoints_collect_restriction_generate_interval($tid = NULL, $start = 
 
   db_insert('userpoints_collect_restrictions_interval')
     ->fields(array(
-      'rid' => 1,
+      'rid' => $restriction->rid,
       'start' => $start,
       'end' => $end,
       'length' => $length,
