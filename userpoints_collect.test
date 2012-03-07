@@ -51,8 +51,6 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
    * interval mode
    */
   function testUserpointsCollectIntervalEligibility() {
-    variable_set('userpoints_collect_mode', 2);
-
     /**
      * Define interval testing settings and generate interval restriction.
      * Test settings:
