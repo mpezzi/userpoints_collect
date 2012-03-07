@@ -70,11 +70,11 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
     $result = userpoints_collect_eligibility($this->authenticated_user, $start);
     $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_ELIGIBLE, t("Interval calculator returned correct status (ELIGIBLE) for a timestamp after first eligibility period has started."));
 
-    // Check eligibility at exactly the end of the last period ($timestamp = 30 seconds from now)
+    // Check eligibility at exactly the end of the last period ($timestamp = 30 seconds after start)
     $result = userpoints_collect_eligibility($this->authenticated_user, $start + 30);
     $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Interval calculator returned correct status (LATE) for a timestamp exactly on when last eligibility period has ended."));
 
-    // Check eligibility after last period ends ($timestamp = 31 seconds from now)
+    // Check eligibility after last period ends ($timestamp = 31 seconds after start)
     $result = userpoints_collect_eligibility($this->authenticated_user, $start + 31);
     $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Interval calculator returned correct status (LATE) for a timestamp after last eligibility period has ended."));
 
