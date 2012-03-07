@@ -59,8 +59,9 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
      * - Last period last is 30 seconds from now.
      */
     $delay = 10;
+    $interval_length = 5;
     $start = time() + $delay;
-    userpoints_collect_restriction_generate_interval(NULL, $start, $start + 30, 5);
+    userpoints_collect_restriction_generate_interval(NULL, $start, $start + 30, $interval_length);
 
     // Check eligibility before first period starts ($timestamp = 5 seconds before)
     $result = userpoints_collect_eligibility($this->authenticated_user, $start - 5);
@@ -82,27 +83,40 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
      * Check eligibility mid-interval
      * ($timestamp = 7 seconds after start).
      * Expected result:
-     *  period_start = start time + 1 interval * 5 secs/interval
-     *  period_end = start time + 2 intervals * 5 secs/interval
+     *  period_start = start time + 1 interval * interval length
+     *  period_end = start time + 2 intervals * interval length
      */
     $result = userpoints_collect_eligibility($this->authenticated_user, $start + 7);
-    $this->assertTrue($result['period_start'] == $start + 1 * 5, t('Interval calculator returned correct period_start for a mid-interval timestamp.'));
-    $this->assertTrue($result['period_end'] == $start + 2 * 5, t('Interval calculator returned correct period_end for a mid-interval timestamp.'));
+    $this->assertTrue($result['period_start'] == $start + 1 * $interval_length, t('Interval calculator returned correct period_start for a mid-interval timestamp.'));
+    $this->assertTrue($result['period_end'] == $start + 2 * $interval_length, t('Interval calculator returned correct period_end for a mid-interval timestamp.'));
 
     /**
      * Check eligibility between intervals
      * ($timestamp = 10 seconds after start. i.e. end of second interval / start of third interval)
      * Expected result:
-     *  period_start = start time + 2 intervals * 5 seconds/interval
-     *  period_end = start time + 3 intervals * 5 seconds/interval
+     *  period_start = start time + 2 intervals * interval length
+     *  period_end = start time + 3 intervals * interval length
      */
     $result = userpoints_collect_eligibility($this->authenticated_user, $start + 10);
-    $this->assertTrue($result['period_start'] == $start + 2 * 5, t("Interval calculator returned correct period_start for a timestamp between intervals."));
-    $this->assertTrue($result['period_end'] == $start + 3 * 5, t("Interval calculator returned correct period_end for a timestamp between intervals."));
+    $this->assertTrue($result['period_start'] == $start + 2 * $interval_length, t("Interval calculator returned correct period_start for a timestamp between intervals."));
+    $this->assertTrue($result['period_end'] == $start + 3 * $interval_length, t("Interval calculator returned correct period_end for a timestamp between intervals."));
 
-    /**
-     * TODO: Check eligibility after user claims a point.
-     */
+     /**
+      * Check eligibility after user claims a point.
+      * (Claim point 5 seconds after start, check eligibility right after it)
+      * @note This test requires a patch for userpoints.module (~line 1029)
+      * to enable assigning points with future timestamps.
+      */
+    $claimed = $start + 5;
+    $params = array(
+      'points' => 1,
+      'uid' => $this->authenticated_user->uid,
+      'time_stamp' => $claimed,
+    );
+    userpoints_userpointsapi($params);
+    $result = userpoints_collect_eligibility($this->authenticated_user, $claimed);
+    $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_NOT_ELIGIBLE, t("Interval calculator returned correct status (NOT ELIGIBLE) for a timestamp after user has claimed a point."));
+    $this->assertTrue($result['next'] !== 0 && $result['next'] != -1 && $result['next'] <= $interval_length, t("Interval calculator returned correct next value for when the user will become eligible after claiming a point."));
   }
 
   /**
@@ -123,7 +137,7 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
     $start = time() + $delay;
 
     // Check eligibility before first period starts ($timestamp = 5 seconds before start)
-    $result = userpoints_collect_eligibility($this->authenticated_user, $start - 5);
+    $result = userpoints_collect_eligibility($this->authenticated_user, $start - $period_length);
     $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_EARLY, t("Series calculator returned correct status (EARLY) for a timestamp before first eligibility period has started."));
 
     // Check eligibility at exactly the start of the first period ($timestamp = start)
@@ -146,8 +160,8 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
      *  period_end = start time + 10-second gap (2 timestamps * 5 second period length)
      */
     $result = userpoints_collect_eligibility($this->authenticated_user, $start + 7);
-    $this->assertTrue($result['period_start'] == $start + 1 * 5, t('Series calculator returned correct period_start for an in-period timestamp.'));
-    $this->assertTrue($result['period_end'] == $start + 2 * 5, t('Series calculator returned correct period_end for an in-period timestamp.'));
+    $this->assertTrue($result['period_start'] == $start + 1 * $period_length, t('Series calculator returned correct period_start for an in-period timestamp.'));
+    $this->assertTrue($result['period_end'] == $start + 2 * $period_length, t('Series calculator returned correct period_end for an in-period timestamp.'));
 
     /**
      * Check eligibility exactly on a series timestamp
@@ -157,8 +171,8 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
      *  period_end = start time + 15-seconds gap (3 timestamps * 5 second period length)
      */
     $result = userpoints_collect_eligibility($this->authenticated_user, $start + 10);
-    $this->assertTrue($result['period_start'] == $start + 2 * 5, t("Series calculator returned correct period_start for a timestamp exactly on a series timestamp."));
-    $this->assertTrue($result['period_end'] == $start + 3 * 5, t("Series calculator returned correct period_end for a timestamp exactly on a series timestamp."));
+    $this->assertTrue($result['period_start'] == $start + 2 * $period_length, t("Series calculator returned correct period_start for a timestamp exactly on a series timestamp."));
+    $this->assertTrue($result['period_end'] == $start + 3 * $period_length, t("Series calculator returned correct period_end for a timestamp exactly on a series timestamp."));
 
     /**
      * Check eligibility after user claims a point.
