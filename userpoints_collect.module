@@ -250,7 +250,11 @@ function userpoints_collect_config($variable = NULL) {
     'redirect' => variable_get('userpoints_collect_redirect', '<front>'),
   );
 
-  return isset($config[$variable]) ? $config[$variable] : $config;
+  if ( !is_null($variable) ) {
+    return isset($config[$variable]) ? $config[$variable] : FALSE;
+  }
+
+  return $config;
 }
 
 /**
