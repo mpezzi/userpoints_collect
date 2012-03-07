@@ -10,49 +10,57 @@
  * Implements hook_variable_info().
  */
 function userpoints_collect_variable_info($options) {
-  $variables['userpoints_collect_submit_label'] = array(
+  $variables['userpoints_collect_is_eligible_text'] = array(
     'type' => 'string',
-    'title' => t('Submit Button label', array(), $options),
-    'description' => t('Messaging to display on the userpoints_collect submit button', array(), $options),
+    'title' => t('Eligible Button Text', array(), $options),
+    'description' => t('Eligible Button Text', array(), $options),
     'default' => 'Collect now!',
     'required' => TRUE,
     'group' => 'userpoints_collect',
   );
-  $variables['userpoints_collect_return_label'] = array(
+  $variables['userpoints_collect_is_not_eligible_text'] = array(
     'type' => 'string',
-    'title' => t('Return to Site label', array(), $options),
-    'description' => t('Messaging to display on the button prompting user to return to a particular site. This is displayed when no ballots are available.', array(), $options),
-    'default' => 'Back to Facebook',
+    'title' => t('Not Eligible Button Text', array(), $options),
+    'description' => t('Not Eligible Button Text', array(), $options),
+    'default' => 'Back to Site',
     'required' => TRUE,
     'group' => 'userpoints_collect',
   );
-  $variables['userpoints_collect_return_url'] = array(
+  $variables['userpoints_collect_is_not_eligible_link'] = array(
     'type' => 'string',
     'title' => t('Return to Site URL', array(), $options),
-    'description' => t('URL to the site users should be redirected to if no ballots are available.', array(), $options),
-    'default' => 'http://facebook.com',
+    'description' => t('Link to use when user is not eligible', array(), $options),
+    'default' => 'http://example.com',
     'required' => TRUE,
     'group' => 'userpoints_collect',
   );
-  $variables['userpoints_collect_no_ballots_label'] = array(
+  $variables['userpoints_collect_note_is_early'] = array(
     'type' => 'string',
-    'title' => t('No ballots remaining label', array(), $options),
-    'description' => 'Messaging to indicate that there are no more ballots remaining.',
-    'default' => 'No more ballots remaining',
+    'title' => t('Note to show when eligibility is early', array(), $options),
+    'description' => 'Note to show when eligibility is early',
+    'default' => 'Availability starts at @start',
     'required' => TRUE,
     'group' => 'userpoints_collect',
   );
-  $variables['userpoints_collect_next_ballot_label'] = array(
+  $variables['userpoints_collect_note_is_late'] = array(
     'type' => 'string',
-    'title' => t('Next ballot available in... label', array(), $options),
-    'description' => 'Messaging for when the next userpoints_collect ballot will be available.',
-    'default' => 'Next ballot available in @timeleft',
+    'title' => t('Note to show when eligibility is late', array(), $options),
+    'description' => 'Note to show when eligibility is late',
+    'default' => 'Availability ended at @end',
+    'required' => TRUE,
+    'group' => 'userpoints_collect',
+  );
+  $variables['userpoints_collect_note_is_not_eligible'] = array(
+    'type' => 'string',
+    'title' => t('Note to show when not eligible', array(), $options),
+    'description' => 'Note to show when not eligible',
+    'default' => 'Next point available in @timeleft',
     'required' => TRUE,
     'group' => 'userpoints_collect',
   );
   $variables['userpoints_collect_redirect'] = array(
     'type' => 'string',
-    'title' => t('After collect path', array(), $options),
+    'title' => t('Path to redirect user to after collecting a point', array(), $options),
     'description' => 'Path to redirect user to after collecting a point',
     'default' => '<front>',
     'required' => TRUE,

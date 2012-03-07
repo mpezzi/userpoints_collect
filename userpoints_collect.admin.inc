@@ -11,10 +11,11 @@
  */
 function userpoints_collect_admin_settings($form, &$form_state) {
   $form['userpoints_collect_tid'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Category ID'),
+    '#type' => 'select',
+    '#title' => t('Category'),
     '#required' => TRUE,
     '#default_value' => userpoints_collect_config('tid'),
+    '#options' => userpoints_get_categories(),
   );
   $form['userpoints_collect_points'] = array(
     '#type' => 'textfield',
@@ -22,36 +23,44 @@ function userpoints_collect_admin_settings($form, &$form_state) {
     '#required' => TRUE,
     '#default_value' => userpoints_collect_config('points'),
   );
-  $form['userpoints_collect_submit_label'] = array(
+  $form['userpoints_collect_is_eligible_text'] = array(
     '#type' => 'textfield',
-    '#title' => t('Submit Button label'),
+    '#title' => t('Eligible Button Text'),
     '#required' => TRUE,
-    '#default_value' => userpoints_collect_config('submit_label'),
+    '#default_value' => userpoints_collect_config('is_eligible_text'),
   );
-  $form['userpoints_collect_return_label'] = array(
+  $form['userpoints_collect_is_not_eligible_text'] = array(
     '#type' => 'textfield',
-    '#title' => t('Return to Site label'),
+    '#title' => t('Not Eligible Button Text'),
     '#required' => TRUE,
-    '#default_value' => userpoints_collect_config('return_label'),
+    '#default_value' => userpoints_collect_config('is_not_eligible_text'),
   );
-  $form['userpoints_collect_return_url'] = array(
+  $form['userpoints_collect_is_not_eligible_link'] = array(
     '#type' => 'textfield',
-    '#title' => t('Return to Site URL'),
+    '#title' => t('Not Eligible Button Link'),
     '#required' => TRUE,
-    '#default_value' => userpoints_collect_config('return_url'),
+    '#default_value' => userpoints_collect_config('is_not_eligible_link'),
   );
-  $form['userpoints_collect_no_ballots_label'] = array(
+  $form['userpoints_collect_note_is_early'] = array(
     '#type' => 'textfield',
-    '#title' => t('No ballots remaining label'),
+    '#title' => t('Note to show when eligibility is early'),
+    '#description' => t('Place @start where you would like the start time of the restriction to show.'),
     '#required' => TRUE,
-    '#default_value' => userpoints_collect_config('no_ballots_label'),
+    '#default_value' => userpoints_collect_config('note_is_early'),
   );
-  $form['userpoints_collect_next_ballot_label'] = array(
+  $form['userpoints_collect_note_is_late'] = array(
     '#type' => 'textfield',
-    '#title' => t('Next ballot available in... label'),
-    '#description' => 'Label must contain @timeleft to indicate where time left until next ballot should be displayed.',
+    '#title' => t('Note to show when eligibility is late'),
+    '#description' => t('Place @end where you would like the end time of the restriction to show.'),
     '#required' => TRUE,
-    '#default_value' => userpoints_collect_config('next_ballot_label'),
+    '#default_value' => userpoints_collect_config('note_is_late'),
+  );
+  $form['userpoints_collect_note_is_not_eligible'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Note to show when not eligible'),
+    '#description' => t('Place @timeleft where you would like the time left of the restriction to show.'),
+    '#required' => TRUE,
+    '#default_value' => userpoints_collect_config('note_is_not_eligible'),
   );
   $form['userpoints_collect_redirect'] = array(
     '#type' => 'textfield',
