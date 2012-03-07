@@ -10,15 +10,11 @@
  * Administrative Settings Form.
  */
 function userpoints_collect_admin_settings($form, &$form_state) {
-  $form['userpoints_collect_mode'] = array(
-    '#type' => 'radios',
-    '#title' => t('Eligibility Mode'),
-    '#description' => t('Choose which type of eligibility mode to for users.'),
-    '#default_value' => userpoints_collect_config('mode'),
-    '#options' => array(
-      USERPOINTS_COLLECT_MODE_SERIES => t('Series'),
-      USERPOINTS_COLLECT_MODE_INTERVAL => t('Interval'),
-    ),
+  $form['userpoints_collect_tid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Category ID'),
+    '#required' => TRUE,
+    '#default_value' => userpoints_collect_config('tid'),
   );
   $form['userpoints_collect_points'] = array(
     '#type' => 'textfield',

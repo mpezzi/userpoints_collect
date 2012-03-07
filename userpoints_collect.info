@@ -5,4 +5,4 @@ core = 7.x
 
 dependencies[] = userpoints
 
-files[] = tests/userpoints_collect.test
+files[] = userpoints_collect.test

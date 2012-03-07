@@ -6,8 +6,7 @@
  */
 
 
-define('USERPOINTS_COLLECT_MODE_SERIES', 1);
-define('USERPOINTS_COLLECT_MODE_INTERVAL', 2);
+require_once dirname(__FILE__) . '/userpoints_collect.inc';
 
 /**
  * Implements hook_permission().
@@ -16,6 +15,10 @@ function userpoints_collect_permission() {
   return array(
     'use userpoints collect' => array(
       'title' => t('Use userpoints collect'),
+      'description' => t('Allows users to use userpoints collect.'),
+    ),
+    'debug userpoints collect' => array(
+      'title' => t('View debug userpoints collect messages.'),
       'description' => t('Allows users to use userpoints collect.'),
     ),
   );
@@ -76,76 +79,82 @@ function userpoints_collect_block_view($delta = '') {
 }
 
 /**
- * Returns an array containing configuration settings.
- *
- * @param $variable
- *   A string representing a configuration variable.
- * @return
- *   A saved config variable or an array of all variables.
- */
-function userpoints_collect_config($variable = NULL) {
-  $config = array(
-    'mode' => variable_get('userpoints_collect_mode', USERPOINTS_COLLECT_MODE_INTERVAL),
-    'points' => variable_get('userpoints_collect_points', 1),
-    'submit_label' => variable_get('userpoints_collect_submit_label', 'Collect now!'),
-    'return_label' => variable_get('userpoints_collect_return_label', 'Back to Facebook'),
-    'return_url' => variable_get('userpoints_collect_return_url', 'http://facebook.com'),
-    'no_ballots_label' => variable_get('userpoints_collect_no_ballots_label', 'No more ballots remaining'),
-    'next_ballot_label' => variable_get('userpoints_collect_next_ballot_label', 'Next ballot available in @timeleft'),
-    'after_collect_path' => variable_get('userpoints_collect_after_collect_path', '<front>'),
-  );
-
-  return isset($config[$variable]) ? $config[$variable] : $config;
-}
-
-/**
- * Returns a Userpoints collect form.
+ * Userpoints Collect Form.
  */
 function userpoints_collect_form($form, &$form_state) {
   global $user;
 
-  if ( userpoints_collect_access() ) {
+  $timestamp = time();
+  $cfg = userpoints_collect_config();
+  $eligibility = userpoints_collect_eligibility($user, time(), $cfg['tid']);
+
+  if ( $eligibility['status'] == USERPOINTS_COLLECT_IS_ELIGIBLE ) {
     $form['submit'] = array(
       '#type' => 'submit',
-      '#value' => userpoints_collect_config('submit_label'),
+      '#value' => $cfg['submit_label'],
     );
   }
   else {
-    $timeleft = userpoints_collect_eligibility_timeleft();
+    switch ( $eligibility['status'] ) {
+      case USERPOINTS_COLLECT_IS_EARLY:
+        $note = format_string($cfg['note_is_early'], array(
+          '@start' => format_interval($eligibility['start']),
+        ));
+        break;
 
-    $form['link'] = array(
-      '#prefix' => '<p>',
-      '#suffix' => '</p>',
-      '#markup' => l(userpoints_collect_config('return_label'), userpoints_collect_config('return_url'), array('attributes' => array('class' => array('btn', 'btn-large', 'btn-primary')))),
-    );
+      case USERPOINTS_COLLECT_IS_LATE:
+        $note = format_string($cfg['note_is_late'], array(
+          '@end' => format_date($eligibility['end']),
+        ));
+        break;
 
-    $form['timeleft'] = array(
-      '#prefix' => '<p>',
-      '#suffix' => '</p>',
-      '#markup' => $timeleft ? format_string(userpoints_collect_config('next_ballot_label'), array('@timeleft' => $timeleft)) : userpoints_collect_config('no_ballots_label'),
-    );
+      case USERPOINTS_COLLECT_IS_NOT_ELIGIBLE:
+        $note = format_string($cfg['note_is_not_eligible'], array(
+          '@timeleft' => format_interval($eligibility['next']),
+        ));
+        break;
+    }
 
     $form['#disabled'] = TRUE;
+
+    $form['link'] = array(
+      '#prefix' => '<p class="link">',
+      '#suffix' => '</p>',
+      '#markup' => l($cfg['return_label'], $cfg['return_url'], array(
+        'attributes' => array(
+          'class' => array('btn', 'btn-primary', 'btn-large'),
+        ),
+      )),
+    );
+
+    if ( isset($note) ) {
+      $form['note'] = array(
+        '#prefix' => '<p class="note">',
+        '#suffix' => '</p>',
+        '#markup' => $note,
+      );
+    }
   }
 
   return $form;
 }
 
 /**
- * Validate a Userpoints collect form submission.
+ * Validation Callback: Userpoints Collect Form.
  */
 function userpoints_collect_form_validate($form, &$form_state) {
-  //drupal_set_message(__FUNCTION__);
+  // @TODO: add some sort of validation here.
 }
 
 /**
- * Process a Userpoints collect form submission.
+ * Submit Callback: Userpoints Collect Form.
  */
 function userpoints_collect_form_submit($form, &$form_state) {
   global $user;
 
   userpoints_collect_add(array(
     'uid' => $user->uid,
+    'tid' => userpoints_collect_config('tid'),
     'points' => userpoints_collect_config('points'),
   ));
 
@@ -157,10 +166,12 @@ function userpoints_collect_form_submit($form, &$form_state) {
  *
  * @param $account
  *   (optional) The account to check, if not given use currently logged in user.
+ * @param $tid
+ *   (optional) The Category ID or NULL.
  * @return
  *   Boolean TRUE if the account has the requested permission.
  */
-function userpoints_collect_access($account = NULL) {
+function userpoints_collect_access($account = NULL, $timestamp = NULL, $tid = NULL) {
   global $user;
 
   if ( !isset($account) ) {
@@ -173,7 +184,8 @@ function userpoints_collect_access($account = NULL) {
   }
 
   // Check if account has permission and is eligible to collect.
-  if ( user_access('use userpoints collect', $account) && userpoints_collect_eligibility($account) ) {
+  $eligibility = userpoints_collect_eligibility($account, $timestamp, $tid);
+  if ( user_access('use userpoints collect', $account) && $eligibility['status'] == USERPOINTS_COLLECT_IS_ELIGIBLE ) {
     return TRUE;
   }
 
@@ -181,256 +193,10 @@ function userpoints_collect_access($account = NULL) {
 }
 
 /**
- * Returns whether a user is eligible to collect a point.
- *
- * @param $account
- *   (optional) The account to check, if not given use the currently logged in user.
- * @return
- *   Boolean TRUE if the account is eligible.
- */
-function userpoints_collect_eligibility($account = NULL) {
-  if ( is_null($account) ) {
-    $account = $GLOBALS['user'];
-  }
-
-  // Load the last transaction by user.
-  $txn = userpoints_collect_last_txn($account);
-  $timestamp = time();
-  $timestamp_last_txn = isset($txn->time_stamp) ? $txn->time_stamp : FALSE;
-  $mode = userpoints_collect_config('mode');
-
-  // Get the eligibility period (min and max timestamp) that the current time would fall into
-  if ( $period = userpoints_collect_eligibility_period($timestamp, $mode) ) {
-    if ( $period['min'] > 0 && $period['max'] > 0 ) {
-      if ( $timestamp_last_txn ) {
-        return $timestamp_last_txn < $period['min'] && $timestamp_last_txn > $period['max'];
-      }
-      else {
-        return $period['min'] < $timestamp && $period['max'] > $timestamp;
-      }
-    }
-  }
-
-  // No eligible dates were found.
-  return FALSE;
-}
-
-/**
- * Returns eligibility information for a timestamp.
- *
- * @param $timestamp
- *   (optional) A timestamp to check eligibility for, if no timestamp is given use current time.
- * @return
- *   A array containing min, max, first and final or FALSE.
- */
-function userpoints_collect_eligibility_period($timestamp = NULL, $mode = NULL) {
-  if ( is_null($timestamp) ) {
-    $timestamp = time();
-  }
-
-  if ( is_null($mode) ) {
-    $mode = userpoints_collect_config('mode');
-  }
-
-  switch ( $mode ) {
-    case USERPOINTS_COLLECT_MODE_INTERVAL:
-      return userpoints_collect_eligibility_period_interval($timestamp);
-    case USERPOINTS_COLLECT_MODE_SERIES:
-      return userpoints_collect_eligibility_period_series($timestamp);
-  }
-
-  return FALSE;
-}
-
-/**
- * Returns eligibility information for interval based time checking.
- *
- * @param $timestamp
- *   A timestamp to check eligibility for.
- * @return
- *   A array containing min, max, first and final or FALSE.
- */
-function userpoints_collect_eligibility_period_interval($timestamp) {
-  // retrieve interval settings from variables table and do
-  // an interval-based calculation for next eligibility period
-  $interval_settings = variable_get('userpoints_collect_dates_interval', NULL);
-  if (is_null($interval_settings)) {
-    // default interval settings
-    // create ten 3-minute intervals starting 10 seconds from now
-    $interval_settings = userpoints_collect_date_load_default_interval_settings();
-  }
-
-  // return false (no eligibility period) if the
-  // current time is before first/earliest eligibility period
-  // or the current time is past the final/latest eligibility period
-  if ($timestamp < $interval_settings['first']) {
-    return FALSE;
-  }
-  elseif (isset($interval_settings['final']) && $timestamp > $interval_settings['final']) {
-    return FALSE;
-  }
-
-  $period = array(
-    'first' => $interval_settings['first'],
-  );
-
-  // set the final eligiblity timestamp if it was set
-  // to a definite time
-  if ( !is_null($interval_settings['final']) ) {
-    $period['final'] = $interval_settings['final'];
-  }
-
-  // calculate the max/min period timestamps using
-  // the number of intervals it takes to count up
-  // to the specified timestamp
-  $num_intervals = ($timestamp - $interval_settings['first']) / $interval_settings['interval'];
-  if ( ($timestamp - $interval_settings['first']) % $interval_settings['interval'] == 0) {
-    // if the interval size divides timestamp evenly,
-    // then timestamp falls right onto an interval min (the start of an interval)
-    $period['min'] = $interval_settings['first'] + $num_intervals * $interval_settings['interval'];
-    $period['max'] = $interval_settings['first'] + ($num_intervals + 1) * $interval_settings['interval'];
-  }
-  else {
-    // if num_intervals isn't a whole number, timestamp falls
-    // in the middle of an interval.  ex. a number_intervals of 2.4
-    // rounds down to 2 intervals (min_intervals) and rounds up
-    // to 3 intervals (max_intervals)
-    $min_intervals = floor($num_intervals);
-    $max_intervals = ceil($num_intervals);
-
-    $period['min'] = $interval_settings['first'] + $min_intervals * $interval_settings['interval'];
-    $period['max'] = $interval_settings['first'] + $max_intervals * $interval_settings['interval'];
-  }
-
-  // TODO: remove after debug
-  // $format = "%H:%M:%S";
-  // dsm(t('Interval settings: @first, @interval, @final', array(
-  //   '@first' => strftime($format, $interval_settings['first']),
-  //   '@interval' => $interval_settings['interval'],
-  //   // '@final' => strftime($format, $interval_settings['final']),
-  // )));
-  // dsm(t('Eligibility period: @min to @max', array(
-  //   '@min' => strftime($format, $period['min']),
-  //   '@max' => strftime($format, $period['max']),
-  // )));
-
-  return $period;
-}
-
-/**
- * Returns eligibility information for series based time checking.
- *
- * @param $timestamp
- *   A timestamp to check eligibility for.
- * @return
- *   A array containing min, max, first and final or FALSE.
- */
-function userpoints_collect_eligibility_period_series($timestamp) {
-  // retrieve the series timestamp data from db
-  $series = db_select('userpoints_collect_series', 's')
-    ->fields('s')
-    ->orderBy('timestamp', 'DESC')
-    ->execute()
-    ->fetchAll();
-
-  // Return the eligibility period only if the current time falls
-  // within an eligibility period recorded in the database.
-  $current = time();
-  if ( $current >= $series[count($series) - 1]->timestamp && $current <= $series[0]->timestamp ) {
-    $period = array();
-    $period['final'] = $series[0]->timestamp;
-    $period['first'] = $series[count($series) - 1]->timestamp;
-
-    // find the minimum/maximum time for the eligibility period
-    for ($i = 0; $i < count($series); $i++) {
-      // handle boundary cases
-      if ($series[$i]->timestamp == $timestamp) {
-        // timestamp = final(latest) timestamp in array
-        if ($i == 0) {
-          $period['min'] = $period['final'];
-          $period['max'] = $series[1]->timestamp;
-        }
-        // timestamp = first(earliest) timestamp in array
-        elseif ($i == count($series) - 1) {
-          $period['min'] = $series[count($series) - 2]->timestamp;
-          $period['max'] = $period['first'];
-        }
-      }
-      else {
-        if ($series[$i]->timestamp < $timestamp) {
-          $period['min'] = $series[$i]->timestamp;
-          $period['max'] = $series[$i - 1]->timestamp;
-          break;
-        }
-      }
-    }
-    return $period;
-  }
-  return FALSE;
-}
-
-/**
- * Returns the last point transaction from an account.
- *
- * @param $account
- *   A user object.
- * @return
- *   A point transaction object or FALSE.
- */
-function userpoints_collect_last_txn($account) {
-  $txns = drupal_static(__FUNCTION__, array());
-
-  if ( !isset($txns[$account->uid]) ) {
-    $txns[$account->uid] = db_select('userpoints_txn', 'u')
-      ->fields('u')
-      ->condition('uid', $account->uid)
-      ->orderBy('time_stamp', 'DESC')
-      ->range(0, 1)
-      ->execute()
-      ->fetchObject();
-  }
-
-  return $txns[$account->uid];
-}
-
-/**
- * Returns next timestamp for when the user can collect
- * a point, or false if there are no upcoming eligible times.
- */
-function userpoints_collect_next_eligible_time() {
-  $period = userpoints_collect_eligibility_period();
-  // return the period max (upcoming time) only if that max
-  // is not set to NULL (i.e. there IS a definite eligibility endpoint)
-  // and if the max isn't the last eligible time
-  if (isset($period['final']) && !is_null($period['final'])) {
-    return $period['max'] < $period['final'] ? $period['max'] : FALSE;
-  }
-  else {
-    // otherwise always return the max for timestamp
-    // the eligibility period
-    return $period['max'];
-  }
-}
-
-/**
- * Returns the time left for collect eligibility.
- */
-function userpoints_collect_eligibility_timeleft() {
-  $next_eligible = userpoints_collect_next_eligible_time();
-
-  if ($next_eligible && $next_eligible > 0) {
-    return format_interval($next_eligible - time());
-  }
-  else {
-    return FALSE;
-  }
-}
-
-/**
  * Add points for a user.
  */
 function userpoints_collect_add($params) {
-  if ( userpoints_collect_access(user_load($params['uid'])) ) {
+  if ( userpoints_collect_access(user_load($params['uid']), NULL, userpoints_collect_config('tid')) ) {
     return userpoints_userpointsapi($params);
   }
 
@@ -443,7 +209,7 @@ function userpoints_collect_add($params) {
 /**
  * Returns an array of possible collect restriction periods.
  */
-function userpoints_collect_eligibility_periods() {
+function userpoints_collect_eligibility_lengths() {
   return array(
     NULL => 'Never',
     60 => '1 minute',
@@ -461,6 +227,32 @@ function userpoints_collect_eligibility_periods() {
 }
 
 /**
+ * Returns an array containing configuration settings.
+ *
+ * @param $variable
+ *   A string representing a configuration variable.
+ * @return
+ *   A saved config variable or an array of all variables.
+ */
+function userpoints_collect_config($variable = NULL) {
+  $config = array(
+    'tid' => variable_get('userpoints_collect_tid', userpoints_get_default_tid()),
+    'points' => variable_get('userpoints_collect_points', 1),
+    'note_is_early' => variable_get('userpoints_collect_note_is_early', 'Availability starts at @start'),
+    'note_is_late' => variable_get('userpoints_collect_note_is_late', 'Availability ended at @end'),
+    'note_is_not_eligible' => variable_get('userpoints_collect_note_is_not_eligible', 'Next point available in @timeleft'),
+    'submit_label' => variable_get('userpoints_collect_submit_label', 'Collect now!'),
+    'return_label' => variable_get('userpoints_collect_return_label', 'Back to Facebook'),
+    'return_url' => variable_get('userpoints_collect_return_url', 'http://facebook.com'),
+    'no_ballots_label' => variable_get('userpoints_collect_no_ballots_label', 'No more ballots remaining'),
+    'next_ballot_label' => variable_get('userpoints_collect_next_ballot_label', 'Next ballot available in @timeleft'),
+    'after_collect_path' => variable_get('userpoints_collect_after_collect_path', '<front>'),
+  );
+
+  return isset($config[$variable]) ? $config[$variable] : $config;
+}
+
+/**
  * Process variables for userpoints-collect-form.tpl.php
  *
  * The $variables array contains the following arguments:
@@ -475,133 +267,4 @@ function template_preprocess_userpoints_collect_form(&$variables) {
   }
 
   $variables['userpoints_collect_form'] = implode($variables['userpoints_collect']);
-}
-
-/**
- * Removes any userpoints_collect date interval settings from the database
- */
-function userpoints_collect_date_clear_interval_settings() {
-  variable_del('userpoints_collect_dates_interval');
-}
-
-/**
- * Sets default values for intervals into Drupal's variables database table.
- *
- * @param $interval_length
- *    the time in seconds that each period of eligibility should last
- *    default: 180 (3 minutes)
- * @param $repeat
- *    the number of intervals.  Set to NULL to repeat indefinitely
- *    default: NULL
- */
-function userpoints_collect_date_set_interval_settings($interval_length = 180, $start = NULL, $repeat = NULL) {
-  userpoints_collect_date_clear_interval_settings();
-  $interval_settings = array();
-  $interval_settings['first'] = is_null($start) ? time() + 10 : $start;
-  $interval_settings['interval'] = $interval_length;
-
-  // check if repeat is set to be indefinite
-  is_null($repeat) ? $interval_settings['final'] = NULL : $interval_settings['final'] = $interval_settings['first'] + $interval_length * $repeat;
-  variable_set('userpoints_collect_dates_interval', $interval_settings);
-  drupal_set_message(t('Successfully generated @repeat intervals, @secs_apart @sec_pluralized apart.', array(
-    '@repeat' => is_null($repeat) ? 'x' : $repeat,
-    '@secs_apart' => $interval_length,
-    '@sec_pluralized' => format_plural($interval_length, 'second', 'seconds'),
-  )));
-}
-
-/**
- * Returns an array containing the default interval settings
- *
- * Specifically, returns an array of ten timestamps, spaced in one-minute
- *  intervals starting ten seconds from now
- */
-function userpoints_collect_date_load_default_interval_settings() {
-  $interval_settings = array();
-  $interval_settings['first'] = time() + 10;
-  $interval_settings['interval'] = 60;
-  $interval_settings['final'] = $interval_settings['first'] + $interval_settings['interval'] * 10;
-  return $interval_settings;
-}
-
-/**
- * Clears out userpoints_collect timestamp timestamps set in variables table
- */
-function userpoints_collect_clear_series() {
-  //variable_del('userpoints_collect_series');
-  db_truncate('userpoints_collect_series')
-  ->execute();
-}
-
-/**
- * Generates an array of ordered or shuffled timestamps with
- * the first timestamp starting 10 seconds from now
- *
- * @param $random_dist
- *    randomizes the distribution (time between dates)
- *    if set, this overrides any setting for $minutes_apart
- * @param $shuffle
- *    shuffles the elements of the array
- * @param $number_of_timestamps
- *    the number of timestamps to generate
- * @param $minutes_apart
- *    the number of minutes between each timestamp in the array
- */
-function userpoints_collect_generate_series($random_dist = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
-  $series = array();
-  $start = time() + 10;
-
-  // create a timestamp object with timestamp 10 seconds from now
-  // and add to series array
-  $time = new stdClass();
-  $time->timestamp = $start;
-  $time->status = 1;
-  array_push($series, $time);
-
-  for ( $i = 1; $i <= $number_of_timestamps; $i++ ) {
-    // if random_dist is true, a multiplier (from 1-5) will be factored into each date
-    $random_dist == TRUE ? $multiplier = rand(1, 5) : $multiplier = 1;
-    $time = new stdClass();
-    $time->timestamp = $start + ($i * $minutes_apart * $multiplier * 60);
-    $time->status = 1;
-    array_push($series, $time);
-  }
-
-  if ($shuffle == TRUE) {
-    shuffle($series);
-  }
-
-  drupal_set_message(t('Successfully generated a series of @number_of_timestamps @random_dist timestamps, @minutes_apart @min_pluralized apart@shuffled', array(
-    '@random_dist' => $random_dist == TRUE ? 'randomly distributed' : 'evenly distributed',
-    '@number_of_timestamps' => $number_of_timestamps,
-    '@minutes_apart' => $random_dist == TRUE ? 'x' : $minutes_apart,
-    '@min_pluralized' => $random_dist == TRUE ? "minutes" : format_plural($minutes_apart, 'minute', 'minutes'),
-    '@shuffled' => $shuffle == TRUE ? ', and then shuffled them.' : '.',
-  )));
-
-  return $series;
-}
-
-/**
-  * Generates and saves an array of ordered or shuffled timestamps with
-  * the first timestamp starting 10 seconds from now.
- *
- * @param $random_dist
- *    randomizes the distribution (time between dates)
- *    if set, this overrides any setting for $minutes_apart
- * @param $shuffle
- *    shuffles the elements of the array
- * @param $number_of_timestamps
- *    the number of timestamps to generate
- * @param $minutes_apart
- *    the number of minutes between each timestamp in the array
- */
-function userpoints_collect_generate_and_save_series($random_dist = FALSE, $shuffle = FALSE, $number_of_timestamps = 5, $minutes_apart = 1) {
-  userpoints_collect_clear_series();
-
-  // generate an array of timestamp objects (a series)
-  $series = userpoints_collect_generate_series($random_dist, $shuffle, $number_of_timestamps, $minutes_apart);
-  foreach($series as $timestamp) {
-    drupal_write_record('userpoints_collect_series', $timestamp);
-  }
 }
