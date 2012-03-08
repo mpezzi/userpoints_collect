@@ -310,25 +310,25 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
   }
 
   /**
-    * Call userpoints_collect_eligibility() with multiple series restrictions
-    */
-   function testMultipleSeriesEligibility() {
-     /**
-      * Define Multiple Series > testing settings and generate series restrictions.
-      *
-      * Test settings:
-      *
-      * a. First restriction
-      * - 5 second periods
-      * - First period starts 10 seconds from now.
-      * - Last period last is 30 seconds from now.
-      *
-      * b. Second restriction
-      * - 8 second periods
-      * - First period starts 10 seconds from now.
-      * - Last period last is 48 seconds from now.
-      *
-      */
+   * Call userpoints_collect_eligibility() with multiple series restrictions
+   */
+  function testMultipleSeriesEligibility() {
+    /**
+     * Define multiple series testing settings and generate series restrictions.
+     *
+     * Test settings:
+     *
+     * a. First restriction
+     * - 5 second periods
+     * - First period starts 10 seconds from now.
+     * - Last period last is 30 seconds from now.
+     *
+     * b. Second restriction
+     * - 8 second periods
+     * - First period starts 10 seconds from now.
+     * - Last period last is 48 seconds from now.
+     *
+     */
 
     // generate and save taxonomy vocabulary terms
     $term_a = (object) array(
@@ -382,11 +382,11 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
     $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Multiple Series > B: Series calculator returned correct status (LATE) for a timestamp after last eligibility period has ended."));
 
     /**
-    * Check eligibility after user claims a point towards one of the series (Series B).
-    * (Claim point at the start of series B (when both series will be active), check eligibility right after it)
-    * @note This test requires a patch for userpoints.module (~line 1029)
-    * to enable assigning points with future timestamps.
-    */
+     * Check eligibility after user claims a point towards one of the series (Series B).
+     * (Claim point at the start of series B (when both series will be active), check eligibility right after it)
+     * @note This test requires a patch for userpoints.module (~line 1029)
+     * to enable assigning points with future timestamps.
+     */
     $claimed = $start['b'];
     $params = array(
       'points' => 1,
@@ -402,11 +402,11 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
     $this->assertTrue($result['next'] !== 0 && $result['next'] != -1 && $result['next'] <= $length['b'], t("Multiple Series > B: Series calculator returned correct next value for when the user will become eligible for a particular series (Series B) after claiming a point."));
 
     /**
-    * Check eligibility after user claims points towards both of the series (Series A and B).
-    * (Claim point 8 seconds after start of series B (after Series B has reset and both series are active again), check eligibility right after it)
-    * @note This test requires a patch for userpoints.module (~line 1029)
-    * to enable assigning points with future timestamps.
-    */
+     * Check eligibility after user claims points towards both of the series (Series A and B).
+     * (Claim point 8 seconds after start of series B (after Series B has reset and both series are active again), check eligibility right after it)
+     * @note This test requires a patch for userpoints.module (~line 1029)
+     * to enable assigning points with future timestamps.
+     */
     $claimed = $start['b'] + 8;
     $params_a = array(
       'points' => 1,
@@ -430,5 +430,6 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
     $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_NOT_ELIGIBLE, t("Multiple Series > B: Series calculator returned correct status (NOT ELIGIBLE) for a timestamp after user has claimed points towards both series (Series A and B)"));
     $this->assertTrue($result['next'] !== 0 && $result['next'] != -1 && $result['next'] <= $length['b'], t("Multiple Series > B: Series calculator returned correct next value for when the user will become eligible for a particular series (Series B) after claiming a point."));
 
-   }
+  }
+
 }
