@@ -130,8 +130,9 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
      * - First period starts 5 seconds from now.
      */
     $period_length = 5;
+    $num_timestamps = 6;    // 6 timestamps = 5 periods
     $delay = $period_length;
-    userpoints_collect_restriction_generate_series(NULL, 6, $period_length);
+    userpoints_collect_restriction_generate_series(NULL, $num_timestamps, $period_length);
     $start = time() + $delay;
 
     // Check eligibility before first period starts ($timestamp = 5 seconds before start)
@@ -143,11 +144,11 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
     $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_ELIGIBLE, t("Series calculator returned correct status (ELIGIBLE) for a timestamp after first eligibility period has started."));
 
     // Check eligibility at exactly the end of the last period ($timestamp = 30 seconds after start)
-    $result = userpoints_collect_eligibility($this->authenticated_user, $start + 30);
+    $result = userpoints_collect_eligibility($this->authenticated_user, $start + ($num_timestamps - 1) * $period_length);
     $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Series calculator returned correct status (LATE) for a timestamp exactly on when last eligibility period has ended."));
 
     // Check eligibility after last period ends ($timestamp = 31 seconds after start)
-    $result = userpoints_collect_eligibility($this->authenticated_user, $start + 31);
+    $result = userpoints_collect_eligibility($this->authenticated_user, $start + ($num_timestamps - 1) * $period_length + 1);
     $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Series calculator returned correct status (LATE) for a timestamp after last eligibility period has ended."));
 
     /**
