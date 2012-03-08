@@ -171,8 +171,10 @@ function userpoints_collect_restriction_generate_interval($tid = NULL, $start = 
  * @param $length
  *   The duration between restrictions.
  */
-function userpoints_collect_restriction_generate_series($tid = NULL, $number = 10, $length = 60) {
-  userpoints_collect_restriction_clear_all();
+function userpoints_collect_restriction_generate_series($tid = NULL, $number = 10, $length = 60, $clear = NULL) {
+  if ( isset($clear) && $clear ){
+    userpoints_collect_restriction_clear_all();
+  }
 
   if ( is_null($tid) ) {
     $tid = userpoints_get_default_tid();
