@@ -236,26 +236,26 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
 
    // Check eligibility before first interval starts ($timestamp = 5/8 seconds before start)
    $result = userpoints_collect_eligibility($this->authenticated_user, $start - $length['a'], $term_a->tid);
-   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_EARLY, t("Multiple A: Interval Calculator returned correct status (EARLY) for a timestamp before first eligibility period has started."));
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_EARLY, t("Multiple Interval > A: Interval Calculator returned correct status (EARLY) for a timestamp before first eligibility period has started."));
    $result = userpoints_collect_eligibility($this->authenticated_user, $start - $length['b'], $term_b->tid);
-   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_EARLY, t("Multiple B: Interval Calculator returned correct status (EARLY) for a timestamp before first eligibility period has started."));
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_EARLY, t("Multiple Interval > B: Interval Calculator returned correct status (EARLY) for a timestamp before first eligibility period has started."));
 
    // Check eligibility at exactly the start of the first interval ($timestamp = start)
    $result = userpoints_collect_eligibility($this->authenticated_user, $start, $term_a->tid);
-   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_ELIGIBLE, t("Multiple A: Interval Calculator returned correct status (ELIGIBLE) for a timestamp after first eligibility period has started."));
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_ELIGIBLE, t("Multiple Interval > A: Interval Calculator returned correct status (ELIGIBLE) for a timestamp at exactly when first eligibility period has started."));
    $result = userpoints_collect_eligibility($this->authenticated_user, $start, $term_b->tid);
-   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_ELIGIBLE, t("Multiple B: Interval Calculator returned correct status (ELIGIBLE) for a timestamp after first eligibility period has started."));
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_ELIGIBLE, t("Multiple Interval > B: Interval Calculator returned correct status (ELIGIBLE) for a timestamp at exactly when first eligibility period has started."));
 
    // Check eligibility at exactly the end of the last interval ($timestamp = 30/48 seconds after start)
    $result = userpoints_collect_eligibility($this->authenticated_user, $start + 30, $term_a->tid);
-   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Multiple A: Interval Calculator returned correct status (LATE) for a timestamp exactly on when last eligibility period has ended."));
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Multiple Interval > A: Interval Calculator returned correct status (LATE) for a timestamp exactly on when last eligibility period has ended."));
    $result = userpoints_collect_eligibility($this->authenticated_user, $start + 48, $term_b->tid);
-   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Multiple B: Interval Calculator returned correct status (LATE) for a timestamp exactly on when last eligibility period has ended."));
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Multiple Interval > B: Interval Calculator returned correct status (LATE) for a timestamp exactly on when last eligibility period has ended."));
 
    // Check eligibility after last interval ends ($timestamp = 31/49 seconds after start)
    $result = userpoints_collect_eligibility($this->authenticated_user, $start + 31, $term_a->tid);
-   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Multiple A: Interval Calculator returned correct status (LATE) for a timestamp after last eligibility period has ended."));
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Multiple Interval > A: Interval Calculator returned correct status (LATE) for a timestamp after last eligibility period has ended."));
    $result = userpoints_collect_eligibility($this->authenticated_user, $start + 49, $term_b->tid);
-   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Multiple B: Interval Calculator returned correct status (LATE) for a timestamp after last eligibility period has ended."));
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Multiple Interval > B: Interval Calculator returned correct status (LATE) for a timestamp after last eligibility period has ended."));
   }
 }
