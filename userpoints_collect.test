@@ -257,5 +257,55 @@ class UserpointsCollectAPITestCase extends UserpointsCollectTestCase {
    $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Multiple Interval > A: Interval Calculator returned correct status (LATE) for a timestamp after last eligibility period has ended."));
    $result = userpoints_collect_eligibility($this->authenticated_user, $start + 49, $term_b->tid);
    $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_LATE, t("Multiple Interval > B: Interval Calculator returned correct status (LATE) for a timestamp after last eligibility period has ended."));
+
+   /**
+   * Check eligibility after user claims a point towards one of the intervals (Interval A).
+   * (Claim point 3 seconds after start (when both intervals will be active), check eligibility right after it)
+   * @note This test requires a patch for userpoints.module (~line 1029)
+   * to enable assigning points with future timestamps.
+   */
+   $claimed = $start + 3;
+   $params = array(
+     'points' => 1,
+     'uid' => $this->authenticated_user->uid,
+     'time_stamp' => $claimed,
+     'tid' => $term_a->tid,
+   );
+   userpoints_userpointsapi($params);
+   $result = userpoints_collect_eligibility($this->authenticated_user, $claimed, $term_a->tid);
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_NOT_ELIGIBLE, t("Multiple Interval > A: Interval calculator returned correct status (NOT ELIGIBLE) for a timestamp after user has claimed a point towards a particular interval (Interval A)."));
+   $this->assertTrue($result['next'] !== 0 && $result['next'] != -1 && $result['next'] <= $length['a'], t("Multiple Interval > A: Interval calculator returned correct next value for when the user will become eligible for a particular interval (Interval A) after claiming a point."));
+   $result = userpoints_collect_eligibility($this->authenticated_user, $claimed, $term_b->tid);
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_ELIGIBLE, t("Multiple Interval > B: Interval calculator returned correct status (ELIGIBLE) for a timestamp after user has claimed a point towards different interval (Interval A)."));
+
+   /**
+   * Check eligibility after user claims points towards both of the intervals (Interval A and B).
+   * (Claim point 6 seconds after start (after interval A has reset, and both intervals are active), check eligibility right after it)
+   * @note This test requires a patch for userpoints.module (~line 1029)
+   * to enable assigning points with future timestamps.
+   */
+   $claimed = $start + 6;
+   $params_a = array(
+     'points' => 1,
+     'uid' => $this->authenticated_user->uid,
+     'time_stamp' => $claimed,
+     'tid' => $term_a->tid,
+   );
+   userpoints_userpointsapi($params_a);
+   $params_b = array(
+     'points' => 1,
+     'uid' => $this->authenticated_user->uid,
+     'time_stamp' => $claimed,
+     'tid' => $term_b->tid,
+   );
+   userpoints_userpointsapi($params_b);
+
+   $result = userpoints_collect_eligibility($this->authenticated_user, $claimed, $term_a->tid);
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_NOT_ELIGIBLE, t("Multiple Interval > A: Interval calculator returned correct status (NOT ELIGIBLE) for a timestamp after user has claimed points towards both intervals (Interval A and B)"));
+   $this->assertTrue($result['next'] !== 0 && $result['next'] != -1 && $result['next'] <= $length['a'], t("Multiple Interval > A: Interval calculator returned correct next value for when the user will become eligible for a particular interval (Interval A) after claiming a point."));
+   $result = userpoints_collect_eligibility($this->authenticated_user, $claimed, $term_b->tid);
+   $this->assertTrue($result['status'] == USERPOINTS_COLLECT_IS_NOT_ELIGIBLE, t("Multiple Interval > B: Interval calculator returned correct status (NOT ELIGIBLE) for a timestamp after user has claimed points towards both intervals (Interval A and B)"));
+   $this->assertTrue($result['next'] !== 0 && $result['next'] != -1 && $result['next'] <= $length['b'], t("Multiple Interval > B: Interval calculator returned correct next value for when the user will become eligible for a particular interval (Interval B) after claiming a point."));
+
   }
 }
