@@ -91,7 +91,7 @@ function userpoints_collect_form($form, &$form_state) {
   if ( $eligibility['status'] == USERPOINTS_COLLECT_IS_ELIGIBLE ) {
     $form['submit'] = array(
       '#type' => 'submit',
-      '#value' => $cfg['submit_label'],
+      '#value' => $cfg['is_eligible_text'],
     );
   }
   else {
@@ -120,7 +120,7 @@ function userpoints_collect_form($form, &$form_state) {
     $form['link'] = array(
       '#prefix' => '<p class="link">',
       '#suffix' => '</p>',
-      '#markup' => l($cfg['return_label'], $cfg['return_url'], array(
+      '#markup' => l($cfg['is_not_eligible_text'], $cfg['is_not_eligible_link'], array(
         'attributes' => array(
           'class' => array('btn', 'btn-primary', 'btn-large'),
         ),
@@ -158,7 +158,7 @@ function userpoints_collect_form_submit($form, &$form_state) {
     'points' => userpoints_collect_config('points'),
   ));
 
-  $form_state['redirect'] = userpoints_collect_config('after_collect_path');
+  $form_state['redirect'] = userpoints_collect_config('redirect');
 }
 
 /**
@@ -238,18 +238,21 @@ function userpoints_collect_config($variable = NULL) {
   $config = array(
     'tid' => variable_get('userpoints_collect_tid', userpoints_get_default_tid()),
     'points' => variable_get('userpoints_collect_points', 1),
+    'is_eligible_text' => variable_get('userpoints_collect_is_eligible_text', 'Collect Point'),
+    'is_not_eligible_text' => variable_get('userpoints_collect_is_not_eligible_label', 'Back to Site'),
+    'is_not_eligible_link' => variable_get('userpoints_collect_is_not_eligible_link', 'http://example.com'),
     'note_is_early' => variable_get('userpoints_collect_note_is_early', 'Availability starts at @start'),
     'note_is_late' => variable_get('userpoints_collect_note_is_late', 'Availability ended at @end'),
     'note_is_not_eligible' => variable_get('userpoints_collect_note_is_not_eligible', 'Next point available in @timeleft'),
-    'submit_label' => variable_get('userpoints_collect_submit_label', 'Collect now!'),
-    'return_label' => variable_get('userpoints_collect_return_label', 'Back to Facebook'),
-    'return_url' => variable_get('userpoints_collect_return_url', 'http://facebook.com'),
-    'no_ballots_label' => variable_get('userpoints_collect_no_ballots_label', 'No more ballots remaining'),
-    'next_ballot_label' => variable_get('userpoints_collect_next_ballot_label', 'Next ballot available in @timeleft'),
-    'after_collect_path' => variable_get('userpoints_collect_after_collect_path', '<front>'),
+    'redirect' => variable_get('userpoints_collect_redirect', '<front>'),
+    'debug' => variable_get('userpoints_collect_debug', FALSE),
   );
 
-  return isset($config[$variable]) ? $config[$variable] : $config;
+  if ( !is_null($variable) ) {
+    return isset($config[$variable]) ? $config[$variable] : FALSE;
+  }
+
+  return $config;
 }
 
 /**

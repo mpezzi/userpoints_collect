@@ -12,22 +12,6 @@
 function userpoints_collect_service_services_resources() {
   return array(
     'userpoints_collect' => array(
-      'retrieve' => array(
-        'help' => 'Retrieve points',
-        'file' => array('file' => 'inc', 'module' => 'userpoints_collect_service', 'name' => 'resources/userpoints_collect_resource'),
-        'callback' => '_userpoints_collect_resource_retrieve',
-        'access callback' => '_userpoints_collect_resource_access',
-        'access arguments' => array('retrieve'),
-        'access arguments append' => TRUE,
-        'args' => array(
-          array(
-            'name' => 'uid',
-            'description' => 'The User ID.',
-            'type' => 'int',
-            'source' => array('path' => 0),
-          ),
-        ),
-      ),
       'actions' => array(
         'eligibility' => array(
           'help' => 'Check the eligibility of an account to collect a point.',
@@ -36,7 +20,14 @@ function userpoints_collect_service_services_resources() {
           'access callback' => '_userpoints_collect_resource_access',
           'access arguments' => array('eligibility'),
           'access arguments append' => TRUE,
-          'args' => array(),
+          'args' => array(
+            array(
+              'name' => 'tid',
+              'description' => 'The Category ID.',
+              'type' => 'int',
+              'source' => array('param' => 'tid'),
+            ),
+          ),
         ),
         'add' => array(
           'help' => 'Add points to account if eligible.',
@@ -47,11 +38,39 @@ function userpoints_collect_service_services_resources() {
           'access arguments append' => TRUE,
           'args' => array(
             array(
-              'name' => 'data',
-              'description' => 'A userpoints object.',
-              'type' => 'array',
+              'name' => 'tid',
+              'type' => 'int',
               'optional' => TRUE,
-              'source' => 'data',
+              'source' => array('param' => 'tid'),
+              'description' => t('An optional Term ID for the category.'),
+            ),
+            array(
+              'name' => 'operation',
+              'type' => 'string',
+              'optional' => TRUE,
+              'source' => array('param' => 'operation'),
+              'description' => t('An operation string for this transaction.'),
+            ),
+            array(
+              'name' => 'description',
+              'type' => 'string',
+              'optional' => TRUE,
+              'source' => array('param' => 'description'),
+              'description' => t('An optional description of this transaction.'),
+            ),
+            array(
+              'name' => 'entity_type',
+              'type' => 'string',
+              'optional' => TRUE,
+              'source' => array('param' => 'entity_type'),
+              'description' => t('An optional description of this transaction.'),
+            ),
+            array(
+              'name' => 'entity_id',
+              'type' => 'int',
+              'optional' => TRUE,
+              'source' => array('param' => 'entity_id'),
+              'description' => t('An optional description of this transaction.'),
             ),
           ),
         ),
@@ -70,6 +89,15 @@ function userpoints_collect_service_services_resources() {
               'source' => array('path' => 0),
             ),
           ),
+        ),
+        'account' => array(
+          'help' => 'Get the current users object.',
+          'file' => array('file' => 'inc', 'module' => 'userpoints_collect_service', 'name' => 'resources/userpoints_collect_resource'),
+          'callback' => '_userpoints_collect_resource_account',
+          'access callback' => '_userpoints_collect_resource_access',
+          'access arguments' => array('account'),
+          'access arguments append' => TRUE,
+          'args' => array(),
         ),
       ),
     ),

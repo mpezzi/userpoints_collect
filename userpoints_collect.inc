@@ -471,7 +471,7 @@ function userpoints_collect_last_txn($account, $tid = NULL) {
  *   An array containing eligibility information.
  */
 function userpoints_collect_eligibility_debug($eligibility) {
-  if ( user_access('debug userpoints collect') ) {
+  if ( user_access('debug userpoints collect') && userpoints_collect_config('debug') ) {
     if ( isset($eligibility['status']) ) {
       drupal_set_message(t('Eligibility: @status', array('@status' => $eligibility['status'], 'custom', USERPOINTS_COLLECT_DEBUG_DATE_FORMAT)));
     }
