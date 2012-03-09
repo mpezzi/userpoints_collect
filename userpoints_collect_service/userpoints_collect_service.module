@@ -86,6 +86,7 @@ function userpoints_collect_service_services_resources() {
               'name' => 'tid',
               'description' => 'The Category ID.',
               'type' => 'int',
+              'optional' => TRUE,
               'source' => array('param' => 'tid'),
             ),
           ),
