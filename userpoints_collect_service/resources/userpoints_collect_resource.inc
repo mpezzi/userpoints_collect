@@ -55,7 +55,7 @@ function _userpoints_collect_resource_add($tid, $operation, $description, $entit
  */
 function _userpoints_collect_resource_get($tid = NULL) {
   if ( is_null($tid) ) {
-    $tid = userpoints_get_default_tid();
+    $tid = 'all';
   }
 
   return userpoints_get_current_points($GLOBALS['user']->uid, $tid);
