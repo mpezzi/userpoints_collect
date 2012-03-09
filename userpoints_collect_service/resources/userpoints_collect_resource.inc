@@ -74,7 +74,13 @@ function _userpoints_collect_resource_account() {
     foreach ( profile2_get_types() as $type => $profile_type ) {
       if ( $profile_type->userView && $profile = profile2_load_by_user($account, $type) ) {
         if ( profile2_access('view', $profile) ) {
-          $account->profile[$type] = $profile->view('account');
+          foreach ( $profile as $key => $profile_field ) {
+            if ( strpos($key, 'field_') !== FALSE ) {
+              $field = field_get_items('profile2', $profile, $key);
+              $field_value = field_view_value('profile2', $profile, $key, $field[0]);
+              $account->{$key} = $field_value['#markup'];
+            }
+          }
         }
       }
     }
