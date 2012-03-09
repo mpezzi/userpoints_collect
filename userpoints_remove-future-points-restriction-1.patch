@@ -1,0 +1,12 @@
+--- userpoints.module	2012-03-09 11:57:15.000000000 -0500
++++ userpoints_new.module	2012-03-09 11:58:48.000000000 -0500
+@@ -1028,7 +1028,8 @@
+ 
+     // Use current time for time_stamp if configured to always use the default,
+     // not set, not a positive integer or in the future.
+-    if (variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1) || !isset($params['time_stamp']) || $params['time_stamp'] <= 0 || $params['time_stamp'] > REQUEST_TIME) {
++    //if (variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1) || !isset($params['time_stamp']) || $params['time_stamp'] <= 0 || $params['time_stamp'] > REQUEST_TIME) {
++    if ( ( variable_get(USERPOINTS_TRANSACTION_TIMESTAMP, 1) && !isset($params['time_stamp']) ) || !isset($params['time_stamp']) || $params['time_stamp'] <= 0 ) {
+       $params['time_stamp'] = REQUEST_TIME;
+     }
+   }
